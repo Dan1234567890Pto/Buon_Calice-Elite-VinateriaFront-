@@ -1,10 +1,15 @@
 {
   "ExpandedNodes": [
+<<<<<<< HEAD
     "",
     "\\Buon-Calice",
     "\\Buon-Calice\\src",
     "\\Buon-Calice\\src\\components"
   ],
   "SelectedNode": "\\Buon-Calice\\src\\components\\Empleado",
+=======
+    ""
+  ],
+>>>>>>> develop-Ximena
   "PreviewInSolutionExplorer": false
 }

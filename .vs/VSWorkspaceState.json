@@ -1,6 +1,10 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\Buon-Calice",
+    "\\Buon-Calice\\src",
+    "\\Buon-Calice\\src\\components"
   ],
+  "SelectedNode": "\\Buon-Calice\\src\\components\\Empleado",
   "PreviewInSolutionExplorer": false
 }

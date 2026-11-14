@@ -1,7 +1,11 @@
 {
   "ExpandedNodes": [
     "",
-    "\\Buon-Calice"
+    "\\Buon-Calice",
+    "\\Buon-Calice\\src",
+    "\\Buon-Calice\\src\\components",
+    "\\Buon-Calice\\src\\services"
   ],
+  "SelectedNode": "\\Buon-Calice\\src\\components\\ProtectedRoute.jsx",
   "PreviewInSolutionExplorer": false
 }

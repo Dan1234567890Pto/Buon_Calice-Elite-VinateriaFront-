@@ -2,10 +2,12 @@
   "ExpandedNodes": [
     "",
     "\\Buon-Calice",
+    "\\Buon-Calice\\public",
     "\\Buon-Calice\\src",
     "\\Buon-Calice\\src\\components",
-    "\\Buon-Calice\\src\\components\\Clientes"
+    "\\Buon-Calice\\src\\components\\Clientes",
+    "\\Buon-Calice\\src\\components\\Empleado"
   ],
-  "SelectedNode": "\\Buon-Calice\\src\\components\\Clientes\\PerfilClienteView.jsx",
+  "SelectedNode": "\\Buon-Calice\\public\\staticwebapp.config.json",
   "PreviewInSolutionExplorer": false
 }

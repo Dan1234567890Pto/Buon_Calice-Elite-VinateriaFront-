@@ -14,7 +14,7 @@ export default function LoginView() {
         setCargando(true);
 
         try {
-            const response = await fetch('https://localhost:7263/api/auth/login', {
+            const response = await fetch('https://buon-calice-fhfefadvd2bygphx.westcentralus-01.azurewebsites.net/api/auth', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ correo, password })

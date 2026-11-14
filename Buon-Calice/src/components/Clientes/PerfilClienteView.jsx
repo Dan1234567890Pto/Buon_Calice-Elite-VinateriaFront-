@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function PerfilClienteView() {
     const navigate = useNavigate();
-    const API_AUTH = 'https://buon-calice-fhfefadvd2bygphx.westcentralus-01.azurewebsites.net';
+    const API_AUTH = 'https://buon-calice-fhfefadvd2bygphx.westcentralus-01.azurewebsites.net/api/auth';
 
     const [esRegistro, setEsRegistro] = useState(false);
     const [cargando, setCargando] = useState(false);

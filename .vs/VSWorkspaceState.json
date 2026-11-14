@@ -1,10 +1,8 @@
 {
   "ExpandedNodes": [
     "",
-    "\\Buon-Calice",
-    "\\Buon-Calice\\src",
-    "\\Buon-Calice\\src\\services"
+    "\\Buon-Calice"
   ],
-  "SelectedNode": "\\Buon-Calice\\src\\services\\api.js",
+  "SelectedNode": "\\Buon-Calice\\.npmrc",
   "PreviewInSolutionExplorer": false
 }

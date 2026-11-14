@@ -1,7 +1,11 @@
 {
   "ExpandedNodes": [
     "",
-    "\\Buon-Calice"
+    "\\Buon-Calice",
+    "\\Buon-Calice\\src",
+    "\\Buon-Calice\\src\\components",
+    "\\Buon-Calice\\src\\components\\Clientes"
   ],
+  "SelectedNode": "\\Buon-Calice\\src\\components\\Clientes\\PerfilClienteView.jsx",
   "PreviewInSolutionExplorer": false
 }

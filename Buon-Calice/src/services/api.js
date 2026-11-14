@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://buon-calice-fhfefadvd2bygphx.westcentralus-01.azurewebsites.net/api';
+const API_BASE_URL = 'https://witty-flower-0cf0ba61e.6.azurestaticapps.net/';
 
 // Exportación secundaria para mantener compatibilidad
 export const API_URL = API_BASE_URL;

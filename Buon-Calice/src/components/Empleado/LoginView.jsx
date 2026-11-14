@@ -14,7 +14,7 @@ export default function LoginView() {
         setCargando(true);
 
         try {
-            const response = await fetch('https://buon-calice-fhfefadvd2bygphx.westcentralus-01.azurewebsites.net/api/auth', {
+            const response = await fetch('https://buon-calice-fhfefadvd2bygphx.westcentralus-01.azurewebsites.net/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ correo, password })
@@ -30,12 +30,18 @@ export default function LoginView() {
             // Extrae el objeto usuario ya sea plano o anidado
             const usuarioBackend = data.usuario || data;
             const rawRol = usuarioBackend.rol || usuarioBackend.Rol || 'cliente';
+            const rolNormalizado = rawRol.toString().trim().toLowerCase();
+
+            // Bloquea el acceso si un cliente intenta entrar al portal administrativo
+            if (rolNormalizado !== 'admin' && rolNormalizado !== 'empleado') {
+                throw new Error('Acceso denegado: Esta cuenta no tiene permisos administrativos.');
+            }
 
             const usuarioNormalizado = {
-                idUsuario: usuarioBackend.idUsuario || usuarioBackend.IdUsuario,
+                idUsuario: usuarioBackend.idUsuario || usuarioBackend.IdUsuario || usuarioBackend.id_usuario,
                 nombre: usuarioBackend.nombre || usuarioBackend.Nombre,
                 correo: usuarioBackend.correo || usuarioBackend.Correo,
-                rol: rawRol.toString().trim().toLowerCase()
+                rol: rolNormalizado
             };
 
             // Guarda el objeto limpio para que ProtectedRoute lea el rol
@@ -47,7 +53,7 @@ export default function LoginView() {
         } catch (err) {
             console.error("Error al autenticar:", err);
             setError(err.message === 'Failed to fetch'
-                ? 'No se pudo conectar con el servidor API. Revisa que esté corriendo en Visual Studio.'
+                ? 'No se pudo conectar con el servidor API en Azure.'
                 : err.message
             );
         } finally {

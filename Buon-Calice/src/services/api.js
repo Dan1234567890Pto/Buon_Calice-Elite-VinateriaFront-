@@ -1,5 +1,5 @@
 // Puerto asignado a tu Web API de .NET
-const API_BASE_URL = 'https://localhost:7263/api';
+const API_BASE_URL = 'https://buon-calice-fhfefadvd2bygphx.westcentralus-01.azurewebsites.net';
 
 // Exportación secundaria para mantener compatibilidad
 export const API_URL = API_BASE_URL;

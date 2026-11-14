@@ -1,0 +1,45 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\",
+<<<<<<< HEAD
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
+    }
+  ],
+=======
+  "Documents": [],
+>>>>>>> develop-Ximena
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+<<<<<<< HEAD
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "EmpleadoView.jsx",
+              "DocumentMoniker": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
+              "RelativeDocumentMoniker": "Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
+              "ToolTip": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
+              "RelativeToolTip": "Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
+              "ViewState": "AgIAANABAAAAAAAAAAAcwPoBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003663|",
+              "WhenOpened": "2026-11-13T21:47:29.964Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+=======
+      "DocumentGroups": []
+>>>>>>> develop-Ximena
+    }
+  ]
+}

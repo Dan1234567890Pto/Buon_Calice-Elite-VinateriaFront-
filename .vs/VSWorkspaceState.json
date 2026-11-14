@@ -5,10 +5,11 @@
     "\\Buon-Calice\\public",
     "\\Buon-Calice\\src",
     "\\Buon-Calice\\src\\assets",
+    "\\Buon-Calice\\src\\components",
     "\\Buon-Calice\\src\\components\\Clientes",
     "\\Buon-Calice\\src\\components\\Empleado",
     "\\Buon-Calice\\src\\services"
   ],
-  "SelectedNode": "\\Buon-Calice\\public\\staticwebapp.config.json",
+  "SelectedNode": "\\Buon-Calice\\src\\components\\Clientes\\PerfilClienteView.jsx",
   "PreviewInSolutionExplorer": false
 }

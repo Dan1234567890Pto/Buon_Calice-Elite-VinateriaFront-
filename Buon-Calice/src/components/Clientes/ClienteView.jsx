@@ -114,29 +114,35 @@ export default function ClienteView() {
         return () => clearTimeout(timer);
     }, []);
 
-    // Polling para rastrear pedidos
+    // Polling para rastrear pedidos en tiempo real desde Azure
     useEffect(() => {
         if (!ultimoPedido) return;
 
         const idBuscar = ultimoPedido.idPedido || ultimoPedido.id_pedido || ultimoPedido.id;
         if (!idBuscar) return;
 
-        const interval = setInterval(async () => {
+        const consultarEstado = async () => {
             try {
-                const res = await fetch(`https://localhost:7263/api/Pedidos/${idBuscar}`);
+                const res = await fetch(`https://buon-calice-fhfefadvd2bygphx.westcentralus-01.azurewebsites.net/api/Pedidos/${idBuscar}`);
                 if (res.ok) {
                     const data = await res.json();
+                    const pedidoApi = data.pedido || data;
+                    const nuevoEstado = pedidoApi?.estado || pedidoApi?.Estado;
 
-                    if (data && data.estado && data.estado !== ultimoPedido.estado) {
-                        const pedidoActualizado = { ...ultimoPedido, estado: data.estado };
+                    if (nuevoEstado && nuevoEstado !== ultimoPedido.estado) {
+                        const pedidoActualizado = { ...ultimoPedido, estado: nuevoEstado };
                         setUltimoPedido(pedidoActualizado);
                         localStorage.setItem('ultimoPedido', JSON.stringify(pedidoActualizado));
                     }
                 }
             } catch (err) {
-                console.log('Esperando actualización de estado...');
+                console.log('Esperando actualización de estado...', err);
             }
-        }, 5000);
+        };
+
+        // Consulta inmediata al abrir la pestaña y luego cada 4 segundos
+        consultarEstado();
+        const interval = setInterval(consultarEstado, 4000);
 
         return () => clearInterval(interval);
     }, [ultimoPedido]);

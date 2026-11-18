@@ -140,7 +140,6 @@ export default function ClienteView() {
             }
         };
 
-        // Consulta inmediata al abrir la pestaña y luego cada 4 segundos
         consultarEstado();
         const interval = setInterval(consultarEstado, 4000);
 
@@ -254,10 +253,10 @@ export default function ClienteView() {
         alert('Sesión de cliente cerrada correctamente.');
     };
 
-    const categoriasUnicas = ['Todos', 'Whisky', 'Bourbon', 'Vino Tinto', 'Vino Blanco', 'Espumoso', 'Tequila', 'Bacardi'];
+    const categoriasUnicas = ['Todos', 'Whisky', 'Bourbon', 'Vino Tinto', 'Vino Blanco', 'Tequila', 'Ron'];
 
     const productosFiltrados = productos.filter((p) => {
-        const coincideCat = filtroCat === 'Todos' || p.categoria === filtroCat || (filtroCat === 'Bacardi' && p.categoria === 'Bacardí');
+        const coincideCat = filtroCat === 'Todos' || p.categoria === filtroCat;
         const coincideBusqueda =
             busqueda.trim() === '' ||
             p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -332,12 +331,12 @@ export default function ClienteView() {
                                 <button
                                     key={cat}
                                     onClick={() => setFiltroCat(cat)}
-                                    className={`px-4 py-2 rounded-xl whitespace-nowrap transition ${filtroCat === cat || (cat === 'Bacardi' && filtroCat === 'Bacardí')
+                                    className={`px-4 py-2 rounded-xl whitespace-nowrap transition ${filtroCat === cat
                                         ? 'bg-[#C5A059] text-black font-semibold'
                                         : 'bg-[#16120E] border border-[#26201B] text-[#9E8E7E]'
                                         }`}
                                 >
-                                    {cat === 'Bacardi' ? 'Bacardí' : cat}
+                                    {cat}
                                 </button>
                             ))}
                         </div>

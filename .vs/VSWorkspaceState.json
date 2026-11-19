@@ -1,19 +1,6 @@
 {
   "ExpandedNodes": [
-    "",
-    "\\Buon-Calice",
-    "\\Buon-Calice\\public",
-    "\\Buon-Calice\\src",
-    "\\Buon-Calice\\src\\assets",
-    "\\Buon-Calice\\src\\components",
-    "\\Buon-Calice\\src\\components\\Clientes",
-    "\\Buon-Calice\\src\\components\\Empleado",
-    "\\Buon-Calice\\src\\services"
+    ""
   ],
-<<<<<<< HEAD
-  "SelectedNode": "\\Buon-Calice\\package-DanMadz.json",
-=======
-  "SelectedNode": "\\Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
->>>>>>> f7802eda5a35f46eb9c721dd1a7879f921367f21
   "PreviewInSolutionExplorer": false
 }

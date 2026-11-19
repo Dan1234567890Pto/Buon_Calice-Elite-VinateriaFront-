@@ -461,7 +461,6 @@ export default function EmpleadoView() {
             )}
 
             {/* SECCIÓN DE INVENTARIO GENERAL PAGINADO DE 10 EN 10 */}
-<<<<<<< HEAD
             <div style={{ backgroundColor: '#16120E', padding: '1.25rem', borderRadius: '16px', border: '1px solid #26201B', marginBottom: '1.75rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.4rem' }}>
                     <span style={{ fontSize: '0.78rem', color: '#C5A059', fontWeight: 'bold', letterSpacing: '0.05em' }}>
@@ -469,15 +468,6 @@ export default function EmpleadoView() {
                     </span>
                     {productos.length > 0 && (
                         <span style={{ fontSize: '0.72rem', color: '#888' }}>
-=======
-            <div style={{ backgroundColor: '#16120E', padding: '1.5rem', borderRadius: '16px', border: '1px solid #26201B', marginBottom: '2rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#C5A059', fontWeight: 'bold', letterSpacing: '0.05em' }}>
-                        📦 INVENTARIO GENERAL ({productos.length})
-                    </span>
-                    {productos.length > 0 && (
-                        <span style={{ fontSize: '0.75rem', color: '#888' }}>
->>>>>>> f7802eda5a35f46eb9c721dd1a7879f921367f21
                             Mostrando {indiceInicio + 1}–{Math.min(indiceInicio + productosPorPagina, productos.length)} de {productos.length} | Página {paginaSegura} de {totalPaginas}
                         </span>
                     )}
@@ -487,30 +477,17 @@ export default function EmpleadoView() {
                     <p style={{ color: '#aaa', textAlign: 'center' }}>Cargando inventario...</p>
                 ) : (
                     <>
-<<<<<<< HEAD
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.85rem' }}>
                             {productosPaginados.map(p => (
                                 <div key={p.idProducto || p.id_producto || p.id} style={{ backgroundColor: '#0D0B0A', padding: '0.85rem', borderRadius: '8px', border: '1px solid #26201B', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                                     <div>
                                         <strong style={{ fontSize: '0.9rem', color: '#F3ECE0', display: 'block', marginBottom: '0.2rem' }}>{p.nombre}</strong>
-=======
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
-                            {productosPaginados.map(p => (
-                                <div key={p.idProducto || p.id_producto || p.id} style={{ backgroundColor: '#0D0B0A', padding: '0.8rem', borderRadius: '8px', border: '1px solid #26201B', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                                    <div>
-                                        <strong style={{ fontSize: '0.9rem', color: '#F3ECE0', display: 'block' }}>{p.nombre}</strong>
->>>>>>> f7802eda5a35f46eb9c721dd1a7879f921367f21
                                         <span style={{ fontSize: '0.75rem', color: '#888', display: 'block', marginBottom: '0.4rem' }}>{p.categoria} | Stock: {p.stock}</span>
                                         <span style={{ fontSize: '0.85rem', color: '#C5A059', fontWeight: 'bold', display: 'block', marginBottom: '0.6rem' }}>${p.precio}</span>
                                     </div>
                                     <div style={{ display: 'flex', gap: '0.4rem' }}>
-<<<<<<< HEAD
                                         <button onClick={() => handleEditarProducto(p)} style={{ flex: 1, padding: '0.4rem', backgroundColor: '#26201B', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>Editar</button>
                                         <button onClick={() => handleEliminarProducto(p.idProducto || p.id_producto || p.id)} style={{ padding: '0.4rem 0.65rem', backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>X</button>
-=======
-                                        <button onClick={() => handleEditarProducto(p)} style={{ flex: 1, padding: '0.3rem', backgroundColor: '#26201B', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer' }}>Editar</button>
-                                        <button onClick={() => handleEliminarProducto(p.idProducto || p.id_producto || p.id)} style={{ padding: '0.3rem 0.5rem', backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: 'none', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer' }}>X</button>
->>>>>>> f7802eda5a35f46eb9c721dd1a7879f921367f21
                                     </div>
                                 </div>
                             ))}
@@ -518,42 +495,26 @@ export default function EmpleadoView() {
 
                         {/* CONTROLES DE PAGINACIÓN */}
                         {totalPaginas > 1 && (
-<<<<<<< HEAD
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #26201B' }}>
-=======
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #26201B' }}>
->>>>>>> f7802eda5a35f46eb9c721dd1a7879f921367f21
                                 <button
                                     type="button"
                                     onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
                                     disabled={paginaSegura === 1}
                                     style={{
-<<<<<<< HEAD
                                         padding: '0.5rem 0.85rem',
-=======
-                                        padding: '0.5rem 1rem',
->>>>>>> f7802eda5a35f46eb9c721dd1a7879f921367f21
                                         backgroundColor: paginaSegura === 1 ? '#120F0C' : '#26201B',
                                         color: paginaSegura === 1 ? '#555' : '#F3ECE0',
                                         border: '1px solid #382E26',
                                         borderRadius: '8px',
                                         cursor: paginaSegura === 1 ? 'not-allowed' : 'pointer',
-<<<<<<< HEAD
                                         fontSize: '0.78rem',
-=======
-                                        fontSize: '0.8rem',
->>>>>>> f7802eda5a35f46eb9c721dd1a7879f921367f21
                                         fontWeight: 'bold'
                                     }}
                                 >
                                     ← Anterior
                                 </button>
 
-<<<<<<< HEAD
                                 <span style={{ fontSize: '0.78rem', color: '#C5A059', fontWeight: 'bold', textAlign: 'center' }}>
-=======
-                                <span style={{ fontSize: '0.8rem', color: '#C5A059', fontWeight: 'bold' }}>
->>>>>>> f7802eda5a35f46eb9c721dd1a7879f921367f21
                                     Página {paginaSegura} / {totalPaginas}
                                 </span>
 
@@ -562,21 +523,13 @@ export default function EmpleadoView() {
                                     onClick={() => setPaginaActual(prev => Math.min(totalPaginas, prev + 1))}
                                     disabled={paginaSegura === totalPaginas}
                                     style={{
-<<<<<<< HEAD
                                         padding: '0.5rem 0.85rem',
-=======
-                                        padding: '0.5rem 1rem',
->>>>>>> f7802eda5a35f46eb9c721dd1a7879f921367f21
                                         backgroundColor: paginaSegura === totalPaginas ? '#120F0C' : '#C5A059',
                                         color: paginaSegura === totalPaginas ? '#555' : '#000',
                                         border: 'none',
                                         borderRadius: '8px',
                                         cursor: paginaSegura === totalPaginas ? 'not-allowed' : 'pointer',
-<<<<<<< HEAD
                                         fontSize: '0.78rem',
-=======
-                                        fontSize: '0.8rem',
->>>>>>> f7802eda5a35f46eb9c721dd1a7879f921367f21
                                         fontWeight: 'bold'
                                     }}
                                 >

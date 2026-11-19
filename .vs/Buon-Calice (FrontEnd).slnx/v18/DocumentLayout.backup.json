@@ -100,6 +100,21 @@
               "RelativeDocumentMoniker": "Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
               "ToolTip": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
               "RelativeToolTip": "Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAEECAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003663|",
+              "WhenOpened": "2026-11-13T21:47:29.964Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+<<<<<<< HEAD
+=======
+              "DocumentIndex": 0,
+              "Title": "EmpleadoView.jsx",
+              "DocumentMoniker": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
+              "RelativeDocumentMoniker": "Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
+              "ToolTip": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
+              "RelativeToolTip": "Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
               "ViewState": "AgIAABQCAAAAAAAAAAAgwD8CAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003663|",
               "WhenOpened": "2026-11-13T21:47:29.964Z",
@@ -107,6 +122,7 @@
             },
             {
               "$type": "Document",
+>>>>>>> f7802eda5a35f46eb9c721dd1a7879f921367f21
               "DocumentIndex": 4,
               "Title": "PerfilClienteView.jsx",
               "DocumentMoniker": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Clientes\\PerfilClienteView.jsx",

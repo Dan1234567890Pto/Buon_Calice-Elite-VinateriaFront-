@@ -3,7 +3,7 @@ import ClienteView from './components/Clientes/ClienteView';
 import PerfilClienteView from './components/Clientes/PerfilClienteView';
 import EmpleadoView from './components/Empleado/EmpleadoView';
 import LoginView from './components/Empleado/LoginView';
-import ProtectedRoute from './components/Empleado/ProtectedRoute';
+import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
 export default function App() {

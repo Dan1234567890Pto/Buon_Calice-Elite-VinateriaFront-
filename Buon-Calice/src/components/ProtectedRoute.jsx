@@ -1,7 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom';
 
 export default function ProtectedRoute({ allowedRoles }) {
-    // Lee ÚNICAMENTE la sesión administrativa
+    // Lee ÚNICAMENTE la sesión administrativa (ignora cualquier sesión de cliente)
     const sesionRaw = localStorage.getItem('usuario_admin');
     const usuarioSesion = sesionRaw ? JSON.parse(sesionRaw) : null;
 

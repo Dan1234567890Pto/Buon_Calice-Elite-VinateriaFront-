@@ -3,15 +3,15 @@
     "",
     "\\Buon-Calice",
     "\\Buon-Calice\\src",
+<<<<<<< HEAD
     "\\Buon-Calice\\src\\components",
-    "\\Buon-Calice\\src\\components\\Clientes",
-    "\\Buon-Calice\\src\\components\\Empleado",
     "\\Buon-Calice\\src\\services"
   ],
-<<<<<<< HEAD
   "SelectedNode": "\\Buon-Calice\\src\\components\\ProtectedRoute.jsx",
 =======
-  "SelectedNode": "\\Buon-Calice\\src\\components\\Empleado\\LoginView.jsx",
->>>>>>> 454919bae4f7b2a6296f155ed6d55535851a03d3
+    "\\Buon-Calice\\src\\services"
+  ],
+  "SelectedNode": "\\Buon-Calice\\src\\services\\api.js",
+>>>>>>> 866464a4d5a7f50b883ff2bdcc565576afdbb046
   "PreviewInSolutionExplorer": false
 }

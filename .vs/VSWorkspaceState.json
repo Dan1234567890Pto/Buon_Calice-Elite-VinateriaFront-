@@ -8,6 +8,10 @@
     "\\Buon-Calice\\src\\components\\Empleado",
     "\\Buon-Calice\\src\\services"
   ],
+<<<<<<< HEAD
   "SelectedNode": "\\Buon-Calice\\src\\components\\ProtectedRoute.jsx",
+=======
+  "SelectedNode": "\\Buon-Calice\\src\\components\\Empleado\\LoginView.jsx",
+>>>>>>> 454919bae4f7b2a6296f155ed6d55535851a03d3
   "PreviewInSolutionExplorer": false
 }

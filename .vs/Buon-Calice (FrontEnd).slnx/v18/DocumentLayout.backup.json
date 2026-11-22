@@ -182,7 +182,72 @@
             },
             {
               "$type": "Document",
+<<<<<<< HEAD
               "DocumentIndex": 9,
+=======
+              "DocumentIndex": 2,
+              "Title": "EmpleadoView.jsx",
+              "DocumentMoniker": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
+              "RelativeDocumentMoniker": "Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
+              "ToolTip": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
+              "RelativeToolTip": "Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
+              "ViewState": "AgIAAJcBAAAAAAAAAAAAAKYBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003663|",
+              "WhenOpened": "2026-11-13T21:47:29.964Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "PerfilClienteView.jsx",
+              "DocumentMoniker": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Clientes\\PerfilClienteView.jsx",
+              "RelativeDocumentMoniker": "Buon-Calice\\src\\components\\Clientes\\PerfilClienteView.jsx",
+              "ToolTip": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Clientes\\PerfilClienteView.jsx",
+              "RelativeToolTip": "Buon-Calice\\src\\components\\Clientes\\PerfilClienteView.jsx",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003663|",
+              "WhenOpened": "2026-11-14T05:25:13.471Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "api.js",
+              "DocumentMoniker": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\services\\api.js",
+              "RelativeDocumentMoniker": "Buon-Calice\\src\\services\\api.js",
+              "ToolTip": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\services\\api.js",
+              "RelativeToolTip": "Buon-Calice\\src\\services\\api.js",
+              "ViewState": "AgIAAG8AAAAAAAAAAAAiwJ8AAAACAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
+              "WhenOpened": "2026-11-14T03:34:58.174Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ProtectedRoute.jsx",
+              "DocumentMoniker": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\ProtectedRoute.jsx",
+              "RelativeDocumentMoniker": "Buon-Calice\\src\\components\\ProtectedRoute.jsx",
+              "ToolTip": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\ProtectedRoute.jsx",
+              "RelativeToolTip": "Buon-Calice\\src\\components\\ProtectedRoute.jsx",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003663|",
+              "WhenOpened": "2026-11-14T05:36:45.856Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "LoginView.jsx",
+              "DocumentMoniker": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Empleado\\LoginView.jsx",
+              "RelativeDocumentMoniker": "Buon-Calice\\src\\components\\Empleado\\LoginView.jsx",
+              "ToolTip": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Empleado\\LoginView.jsx",
+              "RelativeToolTip": "Buon-Calice\\src\\components\\Empleado\\LoginView.jsx",
+              "ViewState": "AgIAAEEAAAAAAAAAAAAgwF4AAABRAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003663|",
+              "WhenOpened": "2026-11-14T05:32:13.009Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+>>>>>>> 454919bae4f7b2a6296f155ed6d55535851a03d3
               "Title": "staticwebapp.config.json",
               "DocumentMoniker": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\public\\staticwebapp.config.json",
               "RelativeDocumentMoniker": "Buon-Calice\\public\\staticwebapp.config.json",

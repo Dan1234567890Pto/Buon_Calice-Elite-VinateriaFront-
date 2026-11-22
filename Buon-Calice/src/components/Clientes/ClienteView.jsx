@@ -62,6 +62,7 @@ export default function ClienteView() {
     const [cliNombre, setCliNombre] = useState('');
     const [cliCorreo, setCliCorreo] = useState('');
     const [cliTelefono, setCliTelefono] = useState('');
+    const [errorTelefono, setErrorTelefono] = useState('');
     const [metodoPago, setMetodoPago] = useState('Pagar en línea');
 
     const [perfil, setPerfil] = useState({
@@ -188,6 +189,18 @@ export default function ClienteView() {
         const clienteGuardado = localStorage.getItem('cliente_buoncalice') || localStorage.getItem('usuario_cliente');
         const usuarioActivo = clienteGuardado ? JSON.parse(clienteGuardado) : usuarioSesion;
 
+        // Validar que el teléfono coincida con el registrado en la sesión del cliente
+        const telefonoGuardado = (usuarioActivo?.telefono || '').toString().replace(/\D/g, '');
+        const telefonoIngresado = (cliTelefono || '').toString().replace(/\D/g, '');
+
+        if (telefonoGuardado && telefonoIngresado !== telefonoGuardado) {
+            setErrorTelefono('Ingresa el numero anteriormente ingresado');
+            alert('Ingresa el numero anteriormente ingresado');
+            return;
+        }
+
+        setErrorTelefono('');
+
         const idUsuarioReal = usuarioActivo
             ? (usuarioActivo.id_usuario || usuarioActivo.idUsuario || usuarioActivo.id)
             : 1;
@@ -253,6 +266,7 @@ export default function ClienteView() {
         setCliNombre('');
         setCliCorreo('');
         setCliTelefono('');
+        setErrorTelefono('');
         alert('Sesión de cliente cerrada correctamente.');
     };
 
@@ -510,7 +524,13 @@ export default function ClienteView() {
                         </div>
 
                         {carrito.length > 0 && (
-                            <button onClick={() => setSeccion('sec-confirmacion')} className="w-full bg-[#C5A059] hover:bg-[#B38E47] text-black font-bold text-xs py-3 rounded-xl transition">
+                            <button
+                                onClick={() => {
+                                    setErrorTelefono('');
+                                    setSeccion('sec-confirmacion');
+                                }}
+                                className="w-full bg-[#C5A059] hover:bg-[#B38E47] text-black font-bold text-xs py-3 rounded-xl transition"
+                            >
                                 CONTINUAR PEDIDO
                             </button>
                         )}
@@ -547,14 +567,31 @@ export default function ClienteView() {
                                     onChange={(e) => setCliCorreo(e.target.value)}
                                     className="w-full bg-[#0D0B0A] border border-[#382E26] text-white p-3 rounded-xl focus:outline-none focus:border-[#C5A059]"
                                 />
-                                <input
-                                    type="tel"
-                                    required
-                                    placeholder="Teléfono"
-                                    value={cliTelefono}
-                                    onChange={(e) => setCliTelefono(e.target.value)}
-                                    className="w-full bg-[#0D0B0A] border border-[#382E26] text-white p-3 rounded-xl focus:outline-none focus:border-[#C5A059]"
-                                />
+                                <div className="space-y-1">
+                                    <input
+                                        type="tel"
+                                        required
+                                        placeholder="Teléfono"
+                                        value={cliTelefono}
+                                        onChange={(e) => {
+                                            const valor = e.target.value;
+                                            setCliTelefono(valor);
+                                            const telGuardado = (usuarioSesion?.telefono || '').toString().replace(/\D/g, '');
+                                            const telActual = valor.replace(/\D/g, '');
+                                            if (telGuardado && telActual !== telGuardado) {
+                                                setErrorTelefono('Ingresa el numero anteriormente ingresado');
+                                            } else {
+                                                setErrorTelefono('');
+                                            }
+                                        }}
+                                        className={`w-full bg-[#0D0B0A] border ${errorTelefono ? 'border-rose-500' : 'border-[#382E26]'} text-white p-3 rounded-xl focus:outline-none focus:border-[#C5A059]`}
+                                    />
+                                    {errorTelefono && (
+                                        <p className="text-[11px] text-rose-400 font-medium pl-1">
+                                            {errorTelefono}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="border-b border-[#26201B] pb-3 space-y-2">

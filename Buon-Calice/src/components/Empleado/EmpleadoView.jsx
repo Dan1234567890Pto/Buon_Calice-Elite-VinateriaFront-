@@ -1,423 +1,252 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+    actualizarEstadoPedido,
+    eliminarPedido,
+    getReporteVentas
+} from '../../services/api';
 
-export default function PerfilClienteView() {
+const API_BASE_URL = 'https://buon-calice-fhfefadvd2bygphx.westcentralus-01.azurewebsites.net/api';
+
+export default function EmpleadoView() {
     const navigate = useNavigate();
-    const API_AUTH = 'https://buon-calice-fhfefadvd2bygphx.westcentralus-01.azurewebsites.net/api/auth';
 
-    const [esRegistro, setEsRegistro] = useState(false);
-    const [cargando, setCargando] = useState(false);
-
-    // Estados para verificación de correo (OTP de 6 dígitos)
-    const [pasoVerificacion, setPasoVerificacion] = useState(false);
-    const [correoPendiente, setCorreoPendiente] = useState('');
-    const [codigoOtp, setCodigoOtp] = useState('');
-    const [reenviando, setReenviando] = useState(false);
-
-    // Obtener sesión previa si existe
-    const [cliente, setCliente] = useState(() => {
-        const guardado = localStorage.getItem('cliente_buoncalice') || localStorage.getItem('usuario_cliente');
+    // Lee ÚNICAMENTE la sesión administrativa (nunca toca cliente_buoncalice)
+    const [staff] = useState(() => {
+        const guardado = localStorage.getItem('usuario_admin');
         return guardado ? JSON.parse(guardado) : null;
     });
 
-    const [formData, setFormData] = useState({
-        nombre: '',
-        correo: '',
-        password: '',
-        telefono: ''
-    });
+    const [vistaActiva, setVistaActiva] = useState('pedidos'); // 'pedidos' | 'reportes'
+    const [pedidos, setPedidos] = useState([]);
+    const [reporte, setReporte] = useState(null);
+    const [cargando, setCargando] = useState(true);
+    const [error, setError] = useState('');
 
-    const guardarSesionCliente = (data) => {
-        const rawUsuario = data.usuario || data;
-        const usuarioObj = {
-            ...rawUsuario,
-            rol: (rawUsuario.rol || 'cliente').toLowerCase()
-        };
-
-        localStorage.setItem('cliente_buoncalice', JSON.stringify(usuarioObj));
-        localStorage.setItem('usuario_cliente', JSON.stringify(usuarioObj));
-        setCliente(usuarioObj);
-        navigate('/');
-    };
-
-    // Control del campo Nombre: Elimina números en tiempo real
-    const handleNombreChange = (e) => {
-        const valorLimpio = e.target.value.replace(/[0-9]/g, '');
-        setFormData(prev => ({ ...prev, nombre: valorLimpio }));
-    };
-
-    // Control del campo Teléfono: Acepta solo números y limita a 10 dígitos
-    const handleTelefonoChange = (e) => {
-        const soloNumeros = e.target.value.replace(/\D/g, '');
-        if (soloNumeros.length <= 10) {
-            setFormData(prev => ({ ...prev, telefono: soloNumeros }));
-        }
-    };
-
-    // Control del código OTP: Solo números, máximo 6 dígitos
-    const handleCodigoChange = (e) => {
-        const soloNumeros = e.target.value.replace(/\D/g, '').slice(0, 6);
-        setCodigoOtp(soloNumeros);
-    };
-
-    const handleInputChange = (e) => {
-        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
-    };
-
-    // Envío de Login
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        if (!formData.correo.trim() || !formData.password.trim()) {
-            alert('⚠️ Ingrese su correo y contraseña.');
+    useEffect(() => {
+        if (!staff) {
+            navigate('/login', { replace: true });
             return;
         }
+        cargarDatos();
+    }, [staff, navigate]);
 
+    const cargarDatos = async () => {
         setCargando(true);
+        setError('');
         try {
-            const res = await fetch(`${API_AUTH}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    correo: formData.correo.trim(),
-                    password: formData.password
-                })
-            });
+            const resPedidos = await fetch(`${API_BASE_URL}/pedidos`);
+            if (!resPedidos.ok) throw new Error('No se pudieron cargar los pedidos.');
+            const dataPedidos = await resPedidos.json();
+            setPedidos(Array.isArray(dataPedidos) ? dataPedidos : []);
 
-            const data = await res.json();
-
-            // Si la cuenta existe pero aún no verifica su correo
-            if (res.status === 401 && data.requiereVerificacion) {
-                setCorreoPendiente(data.correo || formData.correo.trim());
-                setCodigoOtp('');
-                setPasoVerificacion(true);
-                alert(`📩 ${data.mensaje}`);
-                return;
-            }
-
-            if (!res.ok) throw new Error(data.mensaje || 'Credenciales incorrectas');
-
-            guardarSesionCliente(data);
+            const dataReporte = await getReporteVentas().catch(() => null);
+            setReporte(dataReporte);
         } catch (err) {
-            alert(`⚠️ ${err.message}`);
+            setError(err.message || 'Error al conectar con el servidor.');
         } finally {
             setCargando(false);
         }
     };
 
-    // Envío de Registro con Validaciones Estrictas + Verificación por Correo
-    const handleRegistro = async (e) => {
-        e.preventDefault();
-
-        if (!formData.nombre.trim() || !formData.correo.trim() || !formData.password.trim() || !formData.telefono.trim()) {
-            alert('⚠️ Todos los campos son obligatorios.');
-            return;
-        }
-
-        if (formData.telefono.length !== 10) {
-            alert('⚠️ El número de teléfono debe tener exactamente 10 dígitos.');
-            return;
-        }
-
-        const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!regexEmail.test(formData.correo)) {
-            alert('⚠️ Ingrese un correo electrónico válido.');
-            return;
-        }
-
-        setCargando(true);
+    const handleCambiarEstado = async (idPedido, nuevoEstado) => {
         try {
-            const correoLimpio = formData.correo.trim();
-            const res = await fetch(`${API_AUTH}/registrar`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    nombre: formData.nombre.trim(),
-                    correo: correoLimpio,
-                    password: formData.password,
-                    telefono: formData.telefono.trim(),
-                    rol: 'cliente'
-                })
-            });
-
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.mensaje || data.error || 'Error al registrar usuario.');
-
-            if (data.requiereVerificacion) {
-                setCorreoPendiente(data.correo || correoLimpio);
-                setCodigoOtp('');
-                setPasoVerificacion(true);
-                alert(`📩 ${data.mensaje}`);
-            } else {
-                alert('🎉 Cuenta creada con éxito. Ahora puedes iniciar sesión.');
-                setEsRegistro(false);
-            }
+            await actualizarEstadoPedido(idPedido, nuevoEstado);
+            setPedidos(prev =>
+                prev.map(p =>
+                    (p.idPedido || p.id) === idPedido ? { ...p, estado: nuevoEstado } : p
+                )
+            );
+            const dataReporte = await getReporteVentas().catch(() => null);
+            if (dataReporte) setReporte(dataReporte);
         } catch (err) {
             alert(`⚠️ ${err.message}`);
-        } finally {
-            setCargando(false);
         }
     };
 
-    // Validar el código de 6 dígitos recibido en el correo
-    const handleVerificarCodigo = async (e) => {
-        e.preventDefault();
-        if (codigoOtp.length !== 6) {
-            alert('⚠️ Ingresa el código completo de 6 dígitos.');
-            return;
-        }
-
-        setCargando(true);
+    const handleEliminarPedido = async (idPedido) => {
+        if (!window.confirm(`¿Eliminar permanentemente el pedido #${idPedido}?`)) return;
         try {
-            const res = await fetch(`${API_AUTH}/verificar-correo`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    correo: correoPendiente,
-                    codigo: codigoOtp
-                })
-            });
-
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.mensaje || data.error || 'Código incorrecto.');
-
-            alert('✅ ¡Correo verificado con éxito! Bienvenido a Buon Calice.');
-            setPasoVerificacion(false);
-            guardarSesionCliente(data);
+            await eliminarPedido(idPedido);
+            setPedidos(prev => prev.filter(p => (p.idPedido || p.id) !== idPedido));
         } catch (err) {
             alert(`⚠️ ${err.message}`);
-        } finally {
-            setCargando(false);
         }
     };
 
-    // Reenviar código OTP al correo
-    const handleReenviarCodigo = async () => {
-        if (!correoPendiente || reenviando) return;
-
-        setReenviando(true);
-        try {
-            const res = await fetch(`${API_AUTH}/reenviar-codigo`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ correo: correoPendiente })
-            });
-
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.mensaje || 'No se pudo reenviar el código.');
-
-            alert(`📨 ${data.mensaje}`);
-        } catch (err) {
-            alert(`⚠️ ${err.message}`);
-        } finally {
-            setReenviando(false);
-        }
-    };
-
+    // Cierra SOLO la sesión del empleado/admin sin afectar la sesión del cliente
     const handleCerrarSesion = () => {
-        localStorage.removeItem('cliente_buoncalice');
-        localStorage.removeItem('usuario_cliente');
-        setCliente(null);
+        localStorage.removeItem('usuario_admin');
+        navigate('/login', { replace: true });
     };
 
-    const inputStyle = {
-        width: '100%',
-        boxSizing: 'border-box',
-        padding: '0.75rem',
-        borderRadius: '8px',
-        border: '1px solid #26201B',
-        backgroundColor: '#0D0B0A',
-        color: '#fff',
-        outline: 'none'
-    };
+    if (!staff) return null;
 
-    // VISTA DE PERFIL ACTIVO
-    if (cliente) {
-        return (
-            <div style={{ padding: 'clamp(1rem, 4vw, 2rem)', backgroundColor: '#0D0B0A', minHeight: '100vh', color: '#fff', maxWidth: '500px', margin: '0 auto', boxSizing: 'border-box' }}>
-                <div style={{ backgroundColor: '#16120E', padding: '2rem', borderRadius: '16px', border: '1px solid #26201B', textAlign: 'center' }}>
-                    <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>👤</span>
-                    <h2 style={{ color: '#C5A059', fontFamily: 'serif', margin: '0 0 0.5rem 0' }}>{cliente.nombre || 'Cliente Buon Calice'}</h2>
-                    <p style={{ color: '#aaa', fontSize: '0.9rem', margin: '0 0 0.5rem 0', wordBreak: 'break-word' }}>{cliente.correo}</p>
-                    {cliente.telefono && <p style={{ color: '#aaa', fontSize: '0.85rem', margin: '0 0 1.5rem 0' }}>📞 {cliente.telefono}</p>}
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <button onClick={() => navigate('/')} style={{ padding: '0.8rem', backgroundColor: '#C5A059', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-                            Ver Catálogo
-                        </button>
-                        <button onClick={handleCerrarSesion} style={{ padding: '0.8rem', backgroundColor: 'transparent', color: '#dc2626', border: '1px solid #dc2626', borderRadius: '8px', cursor: 'pointer' }}>
-                            Cerrar Sesión
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // VISTA DE VERIFICACIÓN DE CORREO (CÓDIGO DE 6 DÍGITOS)
-    if (pasoVerificacion) {
-        return (
-            <div style={{ padding: 'clamp(1rem, 4vw, 2rem)', backgroundColor: '#0D0B0A', minHeight: '100vh', color: '#fff', maxWidth: '450px', margin: '0 auto', boxSizing: 'border-box' }}>
-                <div style={{ backgroundColor: '#16120E', padding: '2rem', borderRadius: '16px', border: '1px solid #C5A059', textAlign: 'center' }}>
-                    <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.75rem' }}>✉️</span>
-                    <h2 style={{ color: '#C5A059', fontFamily: 'serif', margin: '0 0 0.5rem 0' }}>
-                        Verifica tu Correo
-                    </h2>
-                    <p style={{ color: '#aaa', fontSize: '0.85rem', lineHeight: 1.5, margin: '0 0 1.5rem 0' }}>
-                        Enviamos un código de 6 dígitos de parte de <strong style={{ color: '#F3ECE0' }}>Buon Calice</strong> a:<br />
-                        <span style={{ color: '#C5A059', fontWeight: 'bold', wordBreak: 'break-word' }}>{correoPendiente}</span>
-                    </p>
-
-                    <form onSubmit={handleVerificarCodigo} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            maxLength={6}
-                            value={codigoOtp}
-                            onChange={handleCodigoChange}
-                            placeholder="000000"
-                            required
-                            style={{
-                                ...inputStyle,
-                                textAlign: 'center',
-                                fontSize: '1.8rem',
-                                fontFamily: 'monospace',
-                                letterSpacing: '0.5rem',
-                                fontWeight: 'bold',
-                                color: '#D4AF37',
-                                border: '1px solid #C5A059'
-                            }}
-                        />
-
-                        <button
-                            type="submit"
-                            disabled={cargando || codigoOtp.length !== 6}
-                            style={{
-                                padding: '0.85rem',
-                                backgroundColor: codigoOtp.length === 6 ? '#C5A059' : '#382E26',
-                                color: codigoOtp.length === 6 ? '#000' : '#888',
-                                border: 'none',
-                                borderRadius: '8px',
-                                fontWeight: 'bold',
-                                cursor: codigoOtp.length === 6 ? 'pointer' : 'not-allowed'
-                            }}
-                        >
-                            {cargando ? 'Verificando...' : 'Confirmar Código'}
-                        </button>
-                    </form>
-
-                    <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
-                        <button
-                            type="button"
-                            onClick={handleReenviarCodigo}
-                            disabled={reenviando}
-                            style={{ background: 'none', border: 'none', color: '#C5A059', fontSize: '0.85rem', cursor: 'pointer', textDecoration: 'underline' }}
-                        >
-                            {reenviando ? 'Enviando nuevo código...' : '¿No te llegó? Reenviar código'}
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setPasoVerificacion(false);
-                                setCodigoOtp('');
-                            }}
-                            style={{ background: 'none', border: 'none', color: '#888', fontSize: '0.8rem', cursor: 'pointer' }}
-                        >
-                            ← Cambiar correo o volver
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // VISTA DE LOGIN / REGISTRO
     return (
-        <div style={{ padding: 'clamp(1rem, 4vw, 2rem)', backgroundColor: '#0D0B0A', minHeight: '100vh', color: '#fff', maxWidth: '450px', margin: '0 auto', boxSizing: 'border-box' }}>
-            <div style={{ backgroundColor: '#16120E', padding: '2rem', borderRadius: '16px', border: '1px solid #26201B' }}>
-                <h2 style={{ color: '#C5A059', fontFamily: 'serif', textAlign: 'center', marginTop: 0 }}>
-                    {esRegistro ? 'Crear Cuenta' : 'Iniciar Sesión'}
-                </h2>
+        <div style={{ minHeight: '100vh', backgroundColor: '#0D0B0A', color: '#F3ECE0', padding: '1.5rem' }}>
+            {/* Barra superior administrativa */}
+            <header style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '1rem',
+                padding: '1.25rem 1.5rem',
+                backgroundColor: '#16120E',
+                borderRadius: '14px',
+                border: '1px solid #26201B',
+                marginBottom: '1.5rem'
+            }}>
+                <div>
+                    <span style={{ fontSize: '0.75rem', color: '#C5A059', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        Panel {staff.rol === 'admin' ? 'Administrador' : 'Empleado'} • Élite Vinatería
+                    </span>
+                    <h1 style={{ margin: '0.25rem 0 0 0', fontSize: '1.4rem', fontFamily: 'serif' }}>
+                        Bienvenido, {staff.nombre || staff.correo}
+                    </h1>
+                </div>
 
-                <form onSubmit={esRegistro ? handleRegistro : handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {esRegistro && (
-                        <>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.75rem', color: '#aaa', marginBottom: '0.4rem' }}>NOMBRE COMPLETO</label>
-                                <input
-                                    type="text"
-                                    name="nombre"
-                                    value={formData.nombre}
-                                    onChange={handleNombreChange}
-                                    required
-                                    placeholder="Solo letras"
-                                    style={inputStyle}
-                                />
-                            </div>
-
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.75rem', color: '#aaa', marginBottom: '0.4rem' }}>TELÉFONO (10 DÍGITOS)</label>
-                                <input
-                                    type="tel"
-                                    name="telefono"
-                                    value={formData.telefono}
-                                    onChange={handleTelefonoChange}
-                                    required
-                                    maxLength={10}
-                                    placeholder="10 dígitos numéricos"
-                                    style={inputStyle}
-                                />
-                            </div>
-                        </>
-                    )}
-
-                    <div>
-                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#aaa', marginBottom: '0.4rem' }}>CORREO ELECTRÓNICO</label>
-                        <input
-                            type="email"
-                            name="correo"
-                            value={formData.correo}
-                            onChange={handleInputChange}
-                            required
-                            placeholder="ejemplo@correo.com"
-                            style={inputStyle}
-                        />
-                    </div>
-
-                    <div>
-                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#aaa', marginBottom: '0.4rem' }}>CONTRASEÑA</label>
-                        <input
-                            type="password"
-                            name="password"
-                            value={formData.password}
-                            onChange={handleInputChange}
-                            required
-                            placeholder="••••••••"
-                            style={inputStyle}
-                        />
-                    </div>
-
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                     <button
-                        type="submit"
-                        disabled={cargando}
-                        style={{ padding: '0.85rem', backgroundColor: '#C5A059', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginTop: '0.5rem' }}
+                        onClick={cargarDatos}
+                        style={{ padding: '0.6rem 1rem', backgroundColor: '#26201B', color: '#F3ECE0', border: '1px solid #382E26', borderRadius: '8px', cursor: 'pointer' }}
                     >
-                        {cargando ? 'Procesando...' : (esRegistro ? 'Registrarse' : 'Ingresar')}
+                        ↻ Actualizar
                     </button>
-                </form>
-
-                <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
                     <button
-                        onClick={() => {
-                            setEsRegistro(!esRegistro);
-                            setFormData({ nombre: '', correo: '', password: '', telefono: '' });
-                        }}
-                        style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '0.85rem', cursor: 'pointer', textDecoration: 'underline' }}
+                        onClick={handleCerrarSesion}
+                        style={{ padding: '0.6rem 1rem', backgroundColor: 'transparent', color: '#f87171', border: '1px solid #dc2626', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
                     >
-                        {esRegistro ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate aquí'}
+                        Cerrar Sesión Staff
                     </button>
                 </div>
+            </header>
+
+            {/* Pestañas de navegación */}
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                <button
+                    onClick={() => setVistaActiva('pedidos')}
+                    style={{
+                        padding: '0.7rem 1.25rem',
+                        borderRadius: '8px',
+                        border: 'none',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        backgroundColor: vistaActiva === 'pedidos' ? '#C5A059' : '#16120E',
+                        color: vistaActiva === 'pedidos' ? '#000' : '#aaa'
+                    }}
+                >
+                    📦 Gestión de Pedidos ({pedidos.length})
+                </button>
+
+                {staff.rol === 'admin' && (
+                    <button
+                        onClick={() => setVistaActiva('reportes')}
+                        style={{
+                            padding: '0.7rem 1.25rem',
+                            borderRadius: '8px',
+                            border: 'none',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            backgroundColor: vistaActiva === 'reportes' ? '#C5A059' : '#16120E',
+                            color: vistaActiva === 'reportes' ? '#000' : '#aaa'
+                        }}
+                    >
+                        📊 Reporte de Ventas
+                    </button>
+                )}
             </div>
+
+            {error && (
+                <div style={{ padding: '1rem', backgroundColor: 'rgba(220,38,38,0.15)', border: '1px solid #dc2626', borderRadius: '10px', color: '#fca5a5', marginBottom: '1rem' }}>
+                    {error}
+                </div>
+            )}
+
+            {cargando ? (
+                <p style={{ textAlign: 'center', color: '#C5A059', padding: '2rem' }}>Cargando información...</p>
+            ) : vistaActiva === 'pedidos' ? (
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                    {pedidos.length === 0 ? (
+                        <div style={{ padding: '2rem', textAlign: 'center', backgroundColor: '#16120E', borderRadius: '12px', border: '1px solid #26201B', color: '#888' }}>
+                            No hay pedidos registrados todavía.
+                        </div>
+                    ) : (
+                        pedidos.map((pedido) => {
+                            const id = pedido.idPedido || pedido.id;
+                            return (
+                                <div key={id} style={{
+                                    backgroundColor: '#16120E',
+                                    border: '1px solid #26201B',
+                                    borderRadius: '12px',
+                                    padding: '1.25rem',
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    gap: '1rem'
+                                }}>
+                                    <div>
+                                        <h3 style={{ margin: 0, color: '#C5A059' }}>
+                                            Pedido #{id} — {pedido.nombreCliente || pedido.cliente || 'Cliente'}
+                                        </h3>
+                                        <p style={{ margin: '0.35rem 0', fontSize: '0.9rem', color: '#ccc' }}>
+                                            Total: <strong>${Number(pedido.total || 0).toFixed(2)}</strong> • Estado: <span style={{ color: '#C5A059' }}>{pedido.estado || 'Pendiente'}</span>
+                                        </p>
+                                        {pedido.direccion && (
+                                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>📍 {pedido.direccion}</p>
+                                        )}
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                        <select
+                                            value={pedido.estado || 'Pendiente'}
+                                            onChange={(e) => handleCambiarEstado(id, e.target.value)}
+                                            style={{ padding: '0.5rem', borderRadius: '8px', backgroundColor: '#0D0B0A', color: '#fff', border: '1px solid #382E26' }}
+                                        >
+                                            <option value="Pendiente">Pendiente</option>
+                                            <option value="En camino">En camino</option>
+                                            <option value="Entregado">Entregado</option>
+                                            <option value="Cancelado">Cancelado</option>
+                                        </select>
+
+                                        {staff.rol === 'admin' && (
+                                            <button
+                                                onClick={() => handleEliminarPedido(id)}
+                                                style={{ padding: '0.5rem 0.85rem', backgroundColor: 'rgba(220,38,38,0.15)', color: '#f87171', border: '1px solid #dc2626', borderRadius: '8px', cursor: 'pointer' }}
+                                            >
+                                                Eliminar
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            ) : (
+                <div style={{ backgroundColor: '#16120E', border: '1px solid #26201B', borderRadius: '12px', padding: '1.5rem' }}>
+                    <h2 style={{ marginTop: 0, color: '#C5A059', fontFamily: 'serif' }}>Resumen Financiero</h2>
+                    {reporte ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                            <div style={{ padding: '1rem', backgroundColor: '#0D0B0A', borderRadius: '10px', border: '1px solid #26201B' }}>
+                                <span style={{ fontSize: '0.8rem', color: '#888' }}>INGRESOS TOTALES</span>
+                                <p style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#C5A059', margin: '0.25rem 0 0 0' }}>
+                                    ${Number(reporte.totalVentas || reporte.ingresosTotales || 0).toFixed(2)}
+                                </p>
+                            </div>
+                            <div style={{ padding: '1rem', backgroundColor: '#0D0B0A', borderRadius: '10px', border: '1px solid #26201B' }}>
+                                <span style={{ fontSize: '0.8rem', color: '#888' }}>PEDIDOS ENTREGADOS</span>
+                                <p style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#F3ECE0', margin: '0.25rem 0 0 0' }}>
+                                    {reporte.pedidosEntregados ?? reporte.totalPedidos ?? 0}
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <p style={{ color: '#888' }}>No hay datos de ventas entregadas disponibles aún.</p>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

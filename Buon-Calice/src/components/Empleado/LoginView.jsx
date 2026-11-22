@@ -27,7 +27,6 @@ export default function LoginView() {
 
             const data = await response.json();
 
-            // Extrae el objeto usuario ya sea plano o anidado
             const usuarioBackend = data.usuario || data;
             const rawRol = usuarioBackend.rol || usuarioBackend.Rol || 'cliente';
             const rolNormalizado = rawRol.toString().trim().toLowerCase();
@@ -44,9 +43,8 @@ export default function LoginView() {
                 rol: rolNormalizado
             };
 
-            // Guarda el objeto limpio para que ProtectedRoute lea el rol
+            // Solo guarda en usuario_admin (NO toca cliente_buoncalice ni usa 'usuario')
             localStorage.setItem('usuario_admin', JSON.stringify(usuarioNormalizado));
-            localStorage.setItem('usuario', JSON.stringify(usuarioNormalizado));
 
             navigate('/admin');
 

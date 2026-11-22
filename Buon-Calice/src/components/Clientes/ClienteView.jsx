@@ -44,6 +44,10 @@ export default function ClienteView() {
     const [mostrarBuscador, setMostrarBuscador] = useState(false);
     const [splashVisible, setSplashVisible] = useState(true);
 
+    // Paginación de 10 en 10 para "Todos" y cada categoría
+    const [paginaCatalogo, setPaginaCatalogo] = useState(1);
+    const PRODUCTOS_POR_PAGINA = 10;
+
     const [usuarioSesion, setUsuarioSesion] = useState(null);
 
     const [ultimoPedido, setUltimoPedido] = useState(() => {
@@ -71,7 +75,6 @@ export default function ClienteView() {
             setSplashVisible(false);
         }, 1500);
 
-        // Busca prioritariamente la sesión exclusiva de clientes
         const clienteGuardado = localStorage.getItem('cliente_buoncalice') || localStorage.getItem('usuario_cliente');
         if (clienteGuardado) {
             try {
@@ -100,7 +103,7 @@ export default function ClienteView() {
                     categoria: p.categoria || 'Vino Tinto',
                     precio: p.precio,
                     stock: p.stock,
-                    icono: p.icono || p.imagenUrl || '',
+                    icono: p.icono || p.imagenUrl || p.imagen || '',
                     desc: p.descripcion || 'Selección exclusiva de la casa.'
                 }));
                 setProductos(adaptados);
@@ -231,7 +234,7 @@ export default function ClienteView() {
                 categoria: p.categoria || 'Vino Tinto',
                 precio: p.precio,
                 stock: p.stock,
-                icono: p.icono || p.imagenUrl || '',
+                icono: p.icono || p.imagenUrl || p.imagen || '',
                 desc: p.descripcion || 'Selección exclusiva de la casa.'
             })));
 
@@ -264,14 +267,25 @@ export default function ClienteView() {
         return coincideCat && coincideBusqueda;
     });
 
-    const categoriasAgrupadas = productosFiltrados.reduce((acc, p) => {
+    // Cálculo de paginación (10 en 10)
+    const totalPaginas = Math.max(1, Math.ceil(productosFiltrados.length / PRODUCTOS_POR_PAGINA));
+    const paginaSegura = Math.min(paginaCatalogo, totalPaginas);
+    const indiceInicio = (paginaSegura - 1) * PRODUCTOS_POR_PAGINA;
+    const productosPaginados = productosFiltrados.slice(indiceInicio, indiceInicio + PRODUCTOS_POR_PAGINA);
+
+    // Agrupa por categoría únicamente los 10 productos de la página actual
+    const categoriasAgrupadas = productosPaginados.reduce((acc, p) => {
         if (!acc[p.categoria]) acc[p.categoria] = [];
         acc[p.categoria].push(p);
         return acc;
     }, {});
 
-    const totalCarrito = carrito.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
+    const cambiarPagina = (nuevaPagina) => {
+        setPaginaCatalogo(nuevaPagina);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
+    const totalCarrito = carrito.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
     const estadoActual = (ultimoPedido?.estado || '').toUpperCase();
 
     return (
@@ -308,11 +322,23 @@ export default function ClienteView() {
                             <input
                                 type="text"
                                 value={busqueda}
-                                onChange={(e) => setBusqueda(e.target.value)}
+                                onChange={(e) => {
+                                    setBusqueda(e.target.value);
+                                    setPaginaCatalogo(1);
+                                }}
                                 placeholder="Buscar vino, tequila, whisky..."
                                 className="w-full bg-[#0D0B0A] border border-[#C5A059]/60 text-white text-xs px-4 py-3 rounded-xl focus:outline-none focus:border-[#C5A059]"
                             />
-                            <button onClick={() => { setBusqueda(''); setMostrarBuscador(false); }} className="absolute right-3 top-3 text-xs text-[#9E8E7E]">✕</button>
+                            <button
+                                onClick={() => {
+                                    setBusqueda('');
+                                    setPaginaCatalogo(1);
+                                    setMostrarBuscador(false);
+                                }}
+                                className="absolute right-3 top-3 text-xs text-[#9E8E7E]"
+                            >
+                                ✕
+                            </button>
                         </div>
                     </div>
                 )}
@@ -321,16 +347,24 @@ export default function ClienteView() {
             <main className="max-w-md mx-auto p-4 space-y-6">
                 {seccion === 'sec-catalogo' && (
                     <section className="space-y-6">
-                        <div>
-                            <span className="text-xs text-[#9E8E7E]">Selección Exclusiva</span>
-                            <h2 className="text-lg font-serif text-[#F3ECE0]">Nuestra Cava y Licores</h2>
+                        <div className="flex justify-between items-end">
+                            <div>
+                                <span className="text-xs text-[#9E8E7E]">Selección Exclusiva</span>
+                                <h2 className="text-lg font-serif text-[#F3ECE0]">Nuestra Cava y Licores</h2>
+                            </div>
+                            <span className="text-[11px] text-[#9E8E7E]">
+                                {productosFiltrados.length} producto(s)
+                            </span>
                         </div>
 
                         <div className="flex gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
                             {categoriasUnicas.map((cat) => (
                                 <button
                                     key={cat}
-                                    onClick={() => setFiltroCat(cat)}
+                                    onClick={() => {
+                                        setFiltroCat(cat);
+                                        setPaginaCatalogo(1);
+                                    }}
                                     className={`px-4 py-2 rounded-xl whitespace-nowrap transition ${filtroCat === cat
                                         ? 'bg-[#C5A059] text-black font-semibold'
                                         : 'bg-[#16120E] border border-[#26201B] text-[#9E8E7E]'
@@ -347,39 +381,72 @@ export default function ClienteView() {
                             ) : Object.keys(categoriasAgrupadas).length === 0 ? (
                                 <div className="text-center text-[#9E8E7E] py-12 text-xs">No se encontraron productos disponibles.</div>
                             ) : (
-                                Object.keys(categoriasAgrupadas).map((catNombre) => (
-                                    <div key={catNombre} className="space-y-3">
-                                        <div className="flex items-center justify-between border-b border-[#26201B] pb-2">
-                                            <h3 className="text-xs uppercase tracking-widest text-[#C5A059] font-bold">{catNombre}</h3>
-                                            <span className="text-[10px] text-[#9E8E7E]">{categoriasAgrupadas[catNombre].length} opción(es)</span>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {categoriasAgrupadas[catNombre].map((p) => (
-                                                <div
-                                                    key={p.id}
-                                                    onClick={() => verDetalle(p)}
-                                                    className="bg-[#16120E] border border-[#26201B] p-3 rounded-2xl space-y-2 cursor-pointer hover:border-[#C5A059]/50 transition flex flex-col justify-between"
-                                                >
-                                                    <div className="bg-[#0D0B0A] h-28 rounded-xl flex items-center justify-center overflow-hidden">
-                                                        <RenderImagenBotella url={p.icono} alt={p.nombre} />
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="text-xs font-semibold text-[#F3ECE0] line-clamp-1">{p.nombre}</h4>
-                                                        <p className="text-sm font-bold text-[#D4AF37]">${p.precio}.00</p>
-                                                    </div>
-                                                    <span
-                                                        className={`text-[10px] ${p.stock > 0
-                                                            ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                                                            : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
-                                                            } border px-2 py-0.5 rounded-full inline-block self-start`}
+                                <>
+                                    {Object.keys(categoriasAgrupadas).map((catNombre) => (
+                                        <div key={catNombre} className="space-y-3">
+                                            <div className="flex items-center justify-between border-b border-[#26201B] pb-2">
+                                                <h3 className="text-xs uppercase tracking-widest text-[#C5A059] font-bold">{catNombre}</h3>
+                                                <span className="text-[10px] text-[#9E8E7E]">{categoriasAgrupadas[catNombre].length} en esta página</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {categoriasAgrupadas[catNombre].map((p) => (
+                                                    <div
+                                                        key={p.id}
+                                                        onClick={() => verDetalle(p)}
+                                                        className="bg-[#16120E] border border-[#26201B] p-3 rounded-2xl space-y-2 cursor-pointer hover:border-[#C5A059]/50 transition flex flex-col justify-between"
                                                     >
-                                                        {p.stock > 0 ? `Disp: ${p.stock}` : 'Agotado'}
-                                                    </span>
-                                                </div>
-                                            ))}
+                                                        <div className="bg-[#0D0B0A] h-28 rounded-xl flex items-center justify-center overflow-hidden">
+                                                            <RenderImagenBotella url={p.icono} alt={p.nombre} />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-xs font-semibold text-[#F3ECE0] line-clamp-1">{p.nombre}</h4>
+                                                            <p className="text-sm font-bold text-[#D4AF37]">${p.precio}.00</p>
+                                                        </div>
+                                                        <span
+                                                            className={`text-[10px] ${p.stock > 0
+                                                                ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                                                                : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
+                                                                } border px-2 py-0.5 rounded-full inline-block self-start`}
+                                                        >
+                                                            {p.stock > 0 ? `Disp: ${p.stock}` : 'Agotado'}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))
+                                    ))}
+
+                                    {/* CONTROLES DE PAGINACIÓN (10 EN 10) */}
+                                    {totalPaginas > 1 && (
+                                        <div className="flex items-center justify-between pt-4 border-t border-[#26201B] text-xs">
+                                            <button
+                                                onClick={() => cambiarPagina(Math.max(1, paginaSegura - 1))}
+                                                disabled={paginaSegura === 1}
+                                                className={`px-4 py-2.5 rounded-xl border transition font-semibold ${paginaSegura === 1
+                                                    ? 'bg-[#0D0B0A] border-[#1c1815] text-[#555] cursor-not-allowed'
+                                                    : 'bg-[#16120E] border-[#382E26] text-[#C5A059] hover:border-[#C5A059]'
+                                                    }`}
+                                            >
+                                                ← Anterior
+                                            </button>
+
+                                            <span className="text-[#9E8E7E]">
+                                                Página <strong className="text-[#F3ECE0]">{paginaSegura}</strong> de <strong className="text-[#F3ECE0]">{totalPaginas}</strong>
+                                            </span>
+
+                                            <button
+                                                onClick={() => cambiarPagina(Math.min(totalPaginas, paginaSegura + 1))}
+                                                disabled={paginaSegura === totalPaginas}
+                                                className={`px-4 py-2.5 rounded-xl border transition font-semibold ${paginaSegura === totalPaginas
+                                                    ? 'bg-[#0D0B0A] border-[#1c1815] text-[#555] cursor-not-allowed'
+                                                    : 'bg-[#16120E] border-[#382E26] text-[#C5A059] hover:border-[#C5A059]'
+                                                    }`}
+                                            >
+                                                Siguiente →
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </section>
@@ -584,25 +651,33 @@ export default function ClienteView() {
                 )}
             </main>
 
-            <nav className="fixed bottom-0 left-0 right-0 bg-[#16120E] border-t border-[#26201B] py-3 px-6 z-50">
-                <div className="max-w-md mx-auto flex justify-between items-center text-[10px] text-[#9E8E7E]">
-                    <button onClick={() => setSeccion('sec-catalogo')} className={`flex flex-col items-center gap-1 ${seccion === 'sec-catalogo' ? 'text-[#C5A059]' : ''}`}>
-                        <span>🍷</span>
-                        <span>Catálogo</span>
-                    </button>
-                    <button onClick={() => setSeccion('sec-carrito')} className={`flex flex-col items-center gap-1 ${seccion === 'sec-carrito' ? 'text-[#C5A059]' : ''}`}>
-                        <span>🛒</span>
-                        <span>Carrito ({carrito.reduce((a, b) => a + b.cantidad, 0)})</span>
-                    </button>
-                    <button onClick={() => setSeccion('sec-estado')} className={`flex flex-col items-center gap-1 ${seccion === 'sec-estado' ? 'text-[#C5A059]' : ''}`}>
-                        <span>📦</span>
-                        <span>Pedidos</span>
-                    </button>
-                    <button onClick={() => setSeccion('sec-perfil')} className={`flex flex-col items-center gap-1 ${seccion === 'sec-perfil' ? 'text-[#C5A059]' : ''}`}>
-                        <span>👤</span>
-                        <span>Perfil</span>
-                    </button>
-                </div>
+            <nav className="fixed bottom-0 left-0 right-0 bg-[#16120E] border-t border-[#26201B] py-3 px-6 flex justify-around items-center text-[10px] z-50">
+                <button
+                    onClick={() => setSeccion('sec-catalogo')}
+                    className={`flex flex-col items-center gap-1 transition ${seccion === 'sec-catalogo' || seccion === 'sec-detalle' ? 'text-[#C5A059] font-bold' : 'text-[#9E8E7E]'}`}
+                >
+                    <span className="text-base">🍷</span>
+                    <span>Catálogo</span>
+                </button>
+                <button
+                    onClick={() => setSeccion('sec-carrito')}
+                    className={`relative flex flex-col items-center gap-1 transition ${seccion === 'sec-carrito' || seccion === 'sec-confirmacion' ? 'text-[#C5A059] font-bold' : 'text-[#9E8E7E]'}`}
+                >
+                    <span className="text-base">🛒</span>
+                    <span>Carrito</span>
+                    {carrito.length > 0 && (
+                        <span className="absolute -top-1 -right-2 bg-[#C5A059] text-black font-bold text-[9px] w-4 h-4 rounded-full flex items-center justify-center">
+                            {carrito.reduce((acc, item) => acc + item.cantidad, 0)}
+                        </span>
+                    )}
+                </button>
+                <button
+                    onClick={() => setSeccion('sec-estado')}
+                    className={`flex flex-col items-center gap-1 transition ${seccion === 'sec-estado' || seccion === 'sec-exito' ? 'text-[#C5A059] font-bold' : 'text-[#9E8E7E]'}`}
+                >
+                    <span className="text-base">📦</span>
+                    <span>Pedido</span>
+                </button>
             </nav>
         </div>
     );

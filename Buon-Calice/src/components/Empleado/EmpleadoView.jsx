@@ -9,9 +9,45 @@ import {
     actualizarEstadoPedido,
     getReporteVentas
 } from '../../services/api';
-import { mostrarExito, mostrarError, mostrarToast } from '../../utils/notificaciones';
 import Swal from 'sweetalert2';
-import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+
+// Funciones de notificación autocontenidas usando SweetAlert2
+const mostrarExito = (titulo, texto) => {
+    Swal.fire({
+        background: '#16120E',
+        color: '#F3ECE0',
+        icon: 'success',
+        iconColor: '#4ade80',
+        title: titulo,
+        text: texto,
+        confirmButtonColor: '#C5A059'
+    });
+};
+
+const mostrarError = (titulo, texto) => {
+    Swal.fire({
+        background: '#16120E',
+        color: '#F3ECE0',
+        icon: 'error',
+        iconColor: '#f87171',
+        title: titulo,
+        text: texto,
+        confirmButtonColor: '#C5A059'
+    });
+};
+
+const mostrarToast = (titulo, icono = 'info') => {
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        background: '#16120E',
+        color: '#F3ECE0',
+        icon: icono,
+        title: titulo,
+        showConfirmButton: false,
+        timer: 2500
+    });
+};
 
 export default function EmpleadoView() {
     const navigate = useNavigate();
@@ -21,6 +57,10 @@ export default function EmpleadoView() {
         const guardado = localStorage.getItem('usuario_admin');
         return guardado ? JSON.parse(guardado) : null;
     });
+
+    // Estado de conexión nativo (sin depender de hooks externos)
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const esPrimerRender = useRef(true);
 
     const [productos, setProductos] = useState([]);
     const [cargandoProductos, setCargandoProductos] = useState(true);
@@ -37,8 +77,6 @@ export default function EmpleadoView() {
     const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
 
     const [pedidosEliminados, setPedidosEliminados] = useState([]);
-
-    // Estado para almacenar los indicadores KPI de ventas acumuladas
     const [reporteVentas, setReporteVentas] = useState({ totalPedidos: 0, totalVendido: 0, ticketPromedio: 0 });
 
     const [productoEditandoId, setProductoEditandoId] = useState(null);
@@ -55,17 +93,23 @@ export default function EmpleadoView() {
         descripcion: ''
     });
 
-    const isOnline = useOnlineStatus();
-    const esPrimerRender = useRef(true);
+    useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
 
-    // Protección adicional por si alguien entra sin sesión administrativa válida
     useEffect(() => {
         if (!usuarioSesion) {
             navigate('/login', { replace: true });
         }
     }, [usuarioSesion, navigate]);
 
-    // Monitoreo de red en tiempo real
     useEffect(() => {
         if (!usuarioSesion) return;
 
@@ -208,7 +252,7 @@ export default function EmpleadoView() {
             await actualizarEstadoPedido(idReal, nuevoEstado);
             setPedidoSeleccionado(prev => ({ ...prev, estado: nuevoEstado }));
             await obtenerPedidos();
-            mostrarToast(`📦 Pedido actualizado a ${nuevoEstado}`);
+            mostrarToast(`📦 Pedido actualizado a ${nuevoEstado}`, 'success');
         } catch (err) {
             console.error('Error al cambiar estado:', err);
             mostrarError('Error al Actualizar', err.message || 'No se pudo guardar el nuevo estado.');
@@ -332,13 +376,7 @@ export default function EmpleadoView() {
             confirmButtonColor: '#ef4444',
             cancelButtonColor: '#382E26',
             confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-            customClass: {
-                popup: 'border border-[#26201B] rounded-2xl font-sans',
-                title: 'text-[#F3ECE0] font-serif',
-                confirmButton: 'text-white font-bold px-5 py-2 rounded-xl cursor-pointer',
-                cancelButton: 'text-[#aaa] font-bold px-5 py-2 rounded-xl cursor-pointer'
-            }
+            cancelButtonText: 'Cancelar'
         });
 
         if (!result.isConfirmed) return;
@@ -372,7 +410,6 @@ export default function EmpleadoView() {
 
     if (!usuarioSesion) return null;
 
-    // Lógica de filtrado y paginación para Inventario General (5 por página)
     const productosFiltradosInventario = productos.filter(p =>
         (p.nombre || '').toLowerCase().includes(filtroInventario.toLowerCase()) ||
         (p.categoria || '').toLowerCase().includes(filtroInventario.toLowerCase())
@@ -398,14 +435,13 @@ export default function EmpleadoView() {
     return (
         <div style={{ padding: '2.5rem 2rem 4rem 2rem', backgroundColor: '#0D0B0A', minHeight: '100vh', color: '#fff', fontFamily: 'sans-serif', maxWidth: '1150px', margin: '0 auto' }}>
 
-            {/* AVISO VISUAL PERSISTENTE SI ESTÁ OFFLINE */}
             {!isOnline && (
                 <div style={{ backgroundColor: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.4)', color: '#fda4af', padding: '1.1rem', borderRadius: '14px', fontSize: '1rem', marginBottom: '2rem', textAlign: 'center', fontWeight: 'bold' }}>
                     📡 Sin conexión a internet — Vuelve a conectarte a la red para ver los pedidos pendientes.
                 </div>
             )}
 
-            {/* ENCABEZADO AMPLIADO */}
+            {/* ENCABEZADO */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2.5rem', borderBottom: '1px solid #26201B', paddingBottom: '1.75rem' }}>
                 <div>
                     <span style={{ fontSize: '0.9rem', color: '#C5A059', letterSpacing: '0.15em', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -426,7 +462,7 @@ export default function EmpleadoView() {
                 </button>
             </div>
 
-            {/* TARJETAS DE MÉTRICAS / FINANZAS AMPLIADAS */}
+            {/* TARJETAS DE MÉTRICAS */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
                 <div style={{ backgroundColor: '#16120E', padding: '1.75rem', borderRadius: '18px', border: '1px solid #26201B' }}>
                     <span style={{ fontSize: '0.9rem', color: '#9E8E7E', display: 'block', marginBottom: '0.5rem', letterSpacing: '0.08em', fontWeight: 'bold' }}>
@@ -471,7 +507,7 @@ export default function EmpleadoView() {
                 </div>
 
                 {cargandoPedidos && pedidos.length === 0 ? (
-                    <p style={{ color: '#aaa', textAlign: 'center', margin: '1.5rem 0', fontSize: '1.05rem' }}>Cargando pedidos de SQL Server...</p>
+                    <p style={{ color: '#aaa', textAlign: 'center', margin: '1.5rem 0', fontSize: '1.05rem' }}>Cargando pedidos...</p>
                 ) : errorPedidos && pedidos.length === 0 ? (
                     <p style={{ color: '#fda4af', textAlign: 'center', margin: '1.5rem 0', fontSize: '1.05rem' }}>{errorPedidos}</p>
                 ) : pedidos.length === 0 ? (
@@ -569,7 +605,6 @@ export default function EmpleadoView() {
                         <p style={{ margin: 0 }}><strong>Fecha:</strong> {pedidoSeleccionado.fechaPedido ? new Date(pedidoSeleccionado.fechaPedido).toLocaleString() : 'Fecha no registrada'}</p>
                     </div>
 
-                    {/* PRODUCTOS SOLICITADOS */}
                     <div style={{ backgroundColor: '#0D0B0A', padding: '1.35rem', borderRadius: '14px', border: '1px solid #26201B', marginBottom: '1.75rem' }}>
                         <span style={{ fontSize: '0.95rem', color: '#C5A059', fontWeight: 'bold', display: 'block', marginBottom: '1rem', letterSpacing: '0.06em' }}>
                             🛒 PRODUCTOS SOLICITADOS ({itemsPedido.length})
@@ -605,7 +640,7 @@ export default function EmpleadoView() {
                 </div>
             )}
 
-            {/* SECCIÓN DE INVENTARIO GENERAL CON PAGINACIÓN (5 POR PÁGINA) */}
+            {/* INVENTARIO GENERAL */}
             <div style={{ backgroundColor: '#16120E', padding: '2rem', borderRadius: '20px', border: '1px solid #26201B', marginBottom: '2.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
                     <span style={{ fontSize: '1rem', color: '#C5A059', fontWeight: 'bold', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -698,7 +733,6 @@ export default function EmpleadoView() {
                             })}
                         </div>
 
-                        {/* CONTROLES DE PAGINACIÓN */}
                         {totalPaginas > 1 && (
                             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1.5rem' }}>
                                 <button

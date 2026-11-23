@@ -33,10 +33,21 @@ const RenderImagenBotella = ({ url, alt, className = "w-full h-full object-conta
 
 export default function ClienteView() {
     const navigate = useNavigate();
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [seccion, setSeccion] = useState('sec-catalogo');
     const [productos, setProductos] = useState([]);
     const [cargandoApi, setCargandoApi] = useState(true);
-    const [carrito, setCarrito] = useState([]);
+
+    // Persistencia del carrito en localStorage para no perder artículos sin conexión
+    const [carrito, setCarrito] = useState(() => {
+        try {
+            const guardado = localStorage.getItem('carrito_buoncalice');
+            return guardado ? JSON.parse(guardado) : [];
+        } catch {
+            return [];
+        }
+    });
+
     const [prodSeleccionado, setProdSeleccionado] = useState(null);
     const [cantSeleccionada, setCantSeleccionada] = useState(1);
     const [filtroCat, setFiltroCat] = useState('Todos');
@@ -71,6 +82,29 @@ export default function ClienteView() {
         telefono: 'No registrado'
     });
 
+    // Sincronizar carrito en localStorage cada vez que cambie
+    useEffect(() => {
+        try {
+            localStorage.setItem('carrito_buoncalice', JSON.stringify(carrito));
+        } catch (e) {
+            console.error('Error guardando carrito local:', e);
+        }
+    }, [carrito]);
+
+    // Detección de conexión a internet en tiempo real
+    useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
+
     useEffect(() => {
         const timer = setTimeout(() => {
             setSplashVisible(false);
@@ -94,7 +128,11 @@ export default function ClienteView() {
             }
         }
 
-        (async () => {
+        const cargarCatalogo = async () => {
+            if (!navigator.onLine) {
+                setCargandoApi(false);
+                return;
+            }
             try {
                 setCargandoApi(true);
                 const data = await getProductos(true);
@@ -113,19 +151,44 @@ export default function ClienteView() {
             } finally {
                 setCargandoApi(false);
             }
-        })();
+        };
+
+        cargarCatalogo();
 
         return () => clearTimeout(timer);
     }, []);
 
+    // Recargar catálogo automáticamente cuando vuelve el internet
+    useEffect(() => {
+        if (!isOnline) return;
+        (async () => {
+            try {
+                const data = await getProductos(true);
+                const adaptados = (data || []).map(p => ({
+                    id: p.idProducto || p.id,
+                    nombre: p.nombre,
+                    categoria: p.categoria || 'Vino Tinto',
+                    precio: p.precio,
+                    stock: p.stock,
+                    icono: p.icono || p.imagenUrl || p.imagen || '',
+                    desc: p.descripcion || 'Selección exclusiva de la casa.'
+                }));
+                setProductos(adaptados);
+            } catch (error) {
+                console.error("Error recargando catálogo:", error);
+            }
+        })();
+    }, [isOnline]);
+
     // Polling para rastrear pedidos en tiempo real desde Azure
     useEffect(() => {
-        if (!ultimoPedido) return;
+        if (!ultimoPedido || !isOnline) return;
 
         const idBuscar = ultimoPedido.idPedido || ultimoPedido.id_pedido || ultimoPedido.id;
         if (!idBuscar) return;
 
         const consultarEstado = async () => {
+            if (!navigator.onLine) return;
             try {
                 const res = await fetch(`https://buon-calice-fhfefadvd2bygphx.westcentralus-01.azurewebsites.net/api/Pedidos/${idBuscar}`);
                 if (res.ok) {
@@ -148,9 +211,13 @@ export default function ClienteView() {
         const interval = setInterval(consultarEstado, 4000);
 
         return () => clearInterval(interval);
-    }, [ultimoPedido]);
+    }, [ultimoPedido, isOnline]);
 
     const verDetalle = (prod) => {
+        if (!navigator.onLine) {
+            alert('Para seguir comprando reconectate a internet');
+            return;
+        }
         setProdSeleccionado(prod);
         setCantSeleccionada(1);
         setSeccion('sec-detalle');
@@ -166,6 +233,10 @@ export default function ClienteView() {
     };
 
     const agregarCarrito = () => {
+        if (!navigator.onLine) {
+            alert('Para seguir comprando reconectate a internet');
+            return;
+        }
         if (!prodSeleccionado || prodSeleccionado.stock <= 0) {
             alert('Producto agotado');
             return;
@@ -185,6 +256,11 @@ export default function ClienteView() {
 
     const confirmarYEnviarPedido = async (e) => {
         e.preventDefault();
+
+        if (!navigator.onLine) {
+            alert('Para seguir comprando reconectate a internet');
+            return;
+        }
 
         const clienteGuardado = localStorage.getItem('cliente_buoncalice') || localStorage.getItem('usuario_cliente');
         const usuarioActivo = clienteGuardado ? JSON.parse(clienteGuardado) : usuarioSesion;
@@ -252,6 +328,7 @@ export default function ClienteView() {
             })));
 
             setCarrito([]);
+            localStorage.removeItem('carrito_buoncalice');
             setSeccion('sec-exito');
         } catch (err) {
             alert('Error al registrar el pedido en el servidor: ' + err.message);
@@ -330,6 +407,18 @@ export default function ClienteView() {
                     </div>
                 </div>
 
+                {/* AVISO DE SIN CONEXIÓN A INTERNET */}
+                {!isOnline && (
+                    <div className="max-w-md mx-auto bg-rose-500/15 border border-rose-500/40 text-rose-300 px-4 py-2.5 rounded-xl text-xs text-center font-semibold">
+                        📡 Para seguir comprando reconectate a internet
+                        {carrito.length > 0 && (
+                            <span className="block text-[11px] text-[#E2D9CC] font-normal mt-0.5">
+                                Tus {carrito.reduce((acc, item) => acc + item.cantidad, 0)} artículo(s) del carrito están guardados de forma segura.
+                            </span>
+                        )}
+                    </div>
+                )}
+
                 {mostrarBuscador && (
                     <div className="max-w-md mx-auto pt-1">
                         <div className="relative">
@@ -392,6 +481,10 @@ export default function ClienteView() {
                         <div className="space-y-6">
                             {cargandoApi ? (
                                 <div className="text-center text-[#9E8E7E] py-12 text-xs">Cargando catálogo desde SQL Server...</div>
+                            ) : !isOnline && productos.length === 0 ? (
+                                <div className="text-center text-rose-300 py-12 text-xs">
+                                    Para seguir comprando reconectate a internet
+                                </div>
                             ) : Object.keys(categoriasAgrupadas).length === 0 ? (
                                 <div className="text-center text-[#9E8E7E] py-12 text-xs">No se encontraron productos disponibles.</div>
                             ) : (
@@ -407,7 +500,7 @@ export default function ClienteView() {
                                                     <div
                                                         key={p.id}
                                                         onClick={() => verDetalle(p)}
-                                                        className="bg-[#16120E] border border-[#26201B] p-3 rounded-2xl space-y-2 cursor-pointer hover:border-[#C5A059]/50 transition flex flex-col justify-between"
+                                                        className={`bg-[#16120E] border border-[#26201B] p-3 rounded-2xl space-y-2 transition flex flex-col justify-between ${isOnline ? 'cursor-pointer hover:border-[#C5A059]/50' : 'opacity-60 cursor-not-allowed'}`}
                                                     >
                                                         <div className="bg-[#0D0B0A] h-28 rounded-xl flex items-center justify-center overflow-hidden">
                                                             <RenderImagenBotella url={p.icono} alt={p.nombre} />
@@ -484,13 +577,17 @@ export default function ClienteView() {
                             <p className="text-xs text-[#9E8E7E]">{prodSeleccionado.desc}</p>
 
                             <div className="flex justify-center items-center gap-4 py-2">
-                                <button onClick={() => cambiarCant(-1)} className="w-8 h-8 rounded-lg bg-[#0D0B0A] border border-[#382E26] text-white font-bold">-</button>
+                                <button onClick={() => cambiarCant(-1)} disabled={!isOnline} className="w-8 h-8 rounded-lg bg-[#0D0B0A] border border-[#382E26] text-white font-bold disabled:opacity-40">-</button>
                                 <span className="text-sm font-bold text-[#F3ECE0]">{cantSeleccionada}</span>
-                                <button onClick={() => cambiarCant(1)} className="w-8 h-8 rounded-lg bg-[#0D0B0A] border border-[#382E26] text-white font-bold">+</button>
+                                <button onClick={() => cambiarCant(1)} disabled={!isOnline} className="w-8 h-8 rounded-lg bg-[#0D0B0A] border border-[#382E26] text-white font-bold disabled:opacity-40">+</button>
                             </div>
 
-                            <button onClick={agregarCarrito} className="w-full bg-[#C5A059] hover:bg-[#B38E47] text-black font-bold text-xs py-3 rounded-xl transition">
-                                AGREGAR AL CARRITO
+                            <button
+                                onClick={agregarCarrito}
+                                disabled={!isOnline}
+                                className={`w-full font-bold text-xs py-3 rounded-xl transition ${isOnline ? 'bg-[#C5A059] hover:bg-[#B38E47] text-black' : 'bg-[#26201B] text-[#777] cursor-not-allowed'}`}
+                            >
+                                {isOnline ? 'AGREGAR AL CARRITO' : 'PARA SEGUIR COMPRANDO RECONECTATE A INTERNET'}
                             </button>
                         </div>
                     </section>
@@ -526,12 +623,17 @@ export default function ClienteView() {
                         {carrito.length > 0 && (
                             <button
                                 onClick={() => {
+                                    if (!navigator.onLine) {
+                                        alert('Para seguir comprando reconectate a internet');
+                                        return;
+                                    }
                                     setErrorTelefono('');
                                     setSeccion('sec-confirmacion');
                                 }}
-                                className="w-full bg-[#C5A059] hover:bg-[#B38E47] text-black font-bold text-xs py-3 rounded-xl transition"
+                                disabled={!isOnline}
+                                className={`w-full font-bold text-xs py-3 rounded-xl transition ${isOnline ? 'bg-[#C5A059] hover:bg-[#B38E47] text-black' : 'bg-[#26201B] text-[#777] cursor-not-allowed'}`}
                             >
-                                CONTINUAR PEDIDO
+                                {isOnline ? 'CONTINUAR PEDIDO' : 'PARA SEGUIR COMPRANDO RECONECTATE A INTERNET'}
                             </button>
                         )}
                     </section>
@@ -554,23 +656,26 @@ export default function ClienteView() {
                                 <input
                                     type="text"
                                     required
+                                    disabled={!isOnline}
                                     placeholder="Nombre completo"
                                     value={cliNombre}
                                     onChange={(e) => setCliNombre(e.target.value)}
-                                    className="w-full bg-[#0D0B0A] border border-[#382E26] text-white p-3 rounded-xl focus:outline-none focus:border-[#C5A059]"
+                                    className="w-full bg-[#0D0B0A] border border-[#382E26] text-white p-3 rounded-xl focus:outline-none focus:border-[#C5A059] disabled:opacity-50"
                                 />
                                 <input
                                     type="email"
                                     required
+                                    disabled={!isOnline}
                                     placeholder="Correo electrónico"
                                     value={cliCorreo}
                                     onChange={(e) => setCliCorreo(e.target.value)}
-                                    className="w-full bg-[#0D0B0A] border border-[#382E26] text-white p-3 rounded-xl focus:outline-none focus:border-[#C5A059]"
+                                    className="w-full bg-[#0D0B0A] border border-[#382E26] text-white p-3 rounded-xl focus:outline-none focus:border-[#C5A059] disabled:opacity-50"
                                 />
                                 <div className="space-y-1">
                                     <input
                                         type="tel"
                                         required
+                                        disabled={!isOnline}
                                         placeholder="Teléfono"
                                         value={cliTelefono}
                                         onChange={(e) => {
@@ -584,7 +689,7 @@ export default function ClienteView() {
                                                 setErrorTelefono('');
                                             }
                                         }}
-                                        className={`w-full bg-[#0D0B0A] border ${errorTelefono ? 'border-rose-500' : 'border-[#382E26]'} text-white p-3 rounded-xl focus:outline-none focus:border-[#C5A059]`}
+                                        className={`w-full bg-[#0D0B0A] border ${errorTelefono ? 'border-rose-500' : 'border-[#382E26]'} text-white p-3 rounded-xl focus:outline-none focus:border-[#C5A059] disabled:opacity-50`}
                                     />
                                     {errorTelefono && (
                                         <p className="text-[11px] text-rose-400 font-medium pl-1">
@@ -597,11 +702,11 @@ export default function ClienteView() {
                             <div className="border-b border-[#26201B] pb-3 space-y-2">
                                 <h4 className="text-[#F3ECE0] font-semibold">2. Método de Pago</h4>
                                 <label className="flex items-center gap-2 text-[#F3ECE0]">
-                                    <input type="radio" name="pago" value="Pagar en línea" checked={metodoPago === 'Pagar en línea'} onChange={(e) => setMetodoPago(e.target.value)} className="accent-[#C5A059]" />
+                                    <input type="radio" name="pago" disabled={!isOnline} value="Pagar en línea" checked={metodoPago === 'Pagar en línea'} onChange={(e) => setMetodoPago(e.target.value)} className="accent-[#C5A059]" />
                                     Pagar en línea
                                 </label>
                                 <label className="flex items-center gap-2 text-[#F3ECE0]">
-                                    <input type="radio" name="pago" value="Pagar al recoger" checked={metodoPago === 'Pagar al recoger'} onChange={(e) => setMetodoPago(e.target.value)} className="accent-[#C5A059]" />
+                                    <input type="radio" name="pago" disabled={!isOnline} value="Pagar al recoger" checked={metodoPago === 'Pagar al recoger'} onChange={(e) => setMetodoPago(e.target.value)} className="accent-[#C5A059]" />
                                     Pagar al recoger
                                 </label>
                             </div>
@@ -611,8 +716,12 @@ export default function ClienteView() {
                                 <span className="text-base font-bold text-[#D4AF37]">${totalCarrito}.00</span>
                             </div>
 
-                            <button type="submit" className="w-full bg-[#C5A059] hover:bg-[#B38E47] text-black font-bold py-3.5 rounded-xl transition">
-                                CONFIRMAR Y FINALIZAR PEDIDO
+                            <button
+                                type="submit"
+                                disabled={!isOnline}
+                                className={`w-full font-bold py-3.5 rounded-xl transition ${isOnline ? 'bg-[#C5A059] hover:bg-[#B38E47] text-black' : 'bg-[#26201B] text-[#777] cursor-not-allowed'}`}
+                            >
+                                {isOnline ? 'CONFIRMAR Y FINALIZAR PEDIDO' : 'PARA SEGUIR COMPRANDO RECONECTATE A INTERNET'}
                             </button>
                         </form>
                     </section>

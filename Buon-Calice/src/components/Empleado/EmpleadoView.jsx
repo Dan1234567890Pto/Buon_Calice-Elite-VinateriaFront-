@@ -58,7 +58,7 @@ export default function EmpleadoView() {
         return guardado ? JSON.parse(guardado) : null;
     });
 
-    // Estado de conexión nativo (sin depender de hooks externos)
+    // Estado de conexión nativo
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const esPrimerRender = useRef(true);
 
@@ -122,15 +122,15 @@ export default function EmpleadoView() {
         if (esPrimerRender.current) {
             esPrimerRender.current = false;
             if (!isOnline) {
-                mostrarError('Sin conexión a Internet', 'Vuelve a conectarte a la red para ver los pedidos pendientes.');
+                mostrarError('Sin conexión a Internet', 'Reconectate a internet para poder continuar');
             }
             return;
         }
 
         if (!isOnline) {
-            mostrarError('Sin conexión a Internet', 'Vuelve a conectarte a la red para ver los pedidos pendientes.');
+            mostrarError('Sin conexión a Internet', 'Reconectate a internet para poder continuar');
         } else {
-            mostrarToast('🟢 Conexión restablecida. Actualizando pedidos...', 'success');
+            mostrarToast('🟢 Conexión restablecida. Actualizando datos...', 'success');
             obtenerPedidos();
             obtenerMetricasVentas();
             obtenerProductos();
@@ -243,7 +243,7 @@ export default function EmpleadoView() {
 
     const handleCambiarEstadoPedido = async (nuevoEstado) => {
         if (!navigator.onLine) {
-            mostrarError('Sin conexión a Internet', 'Vuelve a conectarte a la red para actualizar pedidos.');
+            mostrarError('Sin conexión a Internet', 'Reconectate a internet para poder continuar');
             return;
         }
         if (!pedidoSeleccionado) return;
@@ -269,7 +269,7 @@ export default function EmpleadoView() {
     const handleEntregarYBorrar = async (e) => {
         e.preventDefault();
         if (!navigator.onLine) {
-            mostrarError('Sin conexión a Internet', 'Vuelve a conectarte a la red para entregar pedidos.');
+            mostrarError('Sin conexión a Internet', 'Reconectate a internet para poder continuar');
             return;
         }
         if (!codigoPedidoBorrar) return;
@@ -322,6 +322,10 @@ export default function EmpleadoView() {
     };
 
     const handleEditarProducto = (prod) => {
+        if (!navigator.onLine) {
+            mostrarError('Sin conexión a Internet', 'Reconectate a internet para poder continuar');
+            return;
+        }
         const id = prod.idProducto || prod.id_producto || prod.id;
         setProductoEditandoId(id);
         setFormData({
@@ -343,7 +347,7 @@ export default function EmpleadoView() {
     const handleGuardarProducto = async (e) => {
         e.preventDefault();
         if (!navigator.onLine) {
-            mostrarError('Sin conexión a Internet', 'Vuelve a conectarte a la red para modificar el inventario.');
+            mostrarError('Sin conexión a Internet', 'Reconectate a internet para poder continuar');
             return;
         }
         try {
@@ -369,7 +373,7 @@ export default function EmpleadoView() {
 
     const handleEliminarProducto = async (id) => {
         if (!navigator.onLine) {
-            mostrarError('Sin conexión a Internet', 'Vuelve a conectarte a la red para eliminar productos.');
+            mostrarError('Sin conexión a Internet', 'Reconectate a internet para poder continuar');
             return;
         }
 
@@ -400,6 +404,10 @@ export default function EmpleadoView() {
 
     const handleBuscarPorId = async (e) => {
         e.preventDefault();
+        if (!navigator.onLine) {
+            mostrarError('Sin conexión a Internet', 'Reconectate a internet para poder continuar');
+            return;
+        }
         if (!idBusqueda) return;
         try {
             const data = await getProductoPorId(idBusqueda);
@@ -476,7 +484,8 @@ export default function EmpleadoView() {
         borderRadius: '12px',
         color: '#fff',
         fontSize: '1rem',
-        outline: 'none'
+        outline: 'none',
+        opacity: isOnline ? 1 : 0.5
     };
 
     return (
@@ -484,7 +493,7 @@ export default function EmpleadoView() {
 
             {!isOnline && (
                 <div style={{ backgroundColor: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.4)', color: '#fda4af', padding: '1.1rem', borderRadius: '14px', fontSize: '1rem', marginBottom: '2rem', textAlign: 'center', fontWeight: 'bold' }}>
-                    📡 Sin conexión a internet — Vuelve a conectarte a la red para ver los pedidos pendientes.
+                    📡 Reconectate a internet para poder continuar
                 </div>
             )}
 
@@ -492,7 +501,7 @@ export default function EmpleadoView() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2.5rem', borderBottom: '1px solid #26201B', paddingBottom: '1.75rem' }}>
                 <div>
                     <span style={{ fontSize: '0.9rem', color: '#C5A059', letterSpacing: '0.15em', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '1.1rem' }}>🟢</span> PANEL DE {(usuarioSesion.rol || 'EMPLEADO').toUpperCase()}
+                        <span style={{ fontSize: '1.1rem' }}>{isOnline ? '🟢' : '🔴'}</span> PANEL DE {(usuarioSesion.rol || 'EMPLEADO').toUpperCase()}
                     </span>
                     <h1 style={{ fontFamily: 'serif', color: '#F3ECE0', margin: '0.4rem 0 0.6rem 0', fontSize: '2.6rem', lineHeight: 1.2 }}>
                         Gestión de Inventario y Pedidos
@@ -634,8 +643,15 @@ export default function EmpleadoView() {
                         <span style={{ fontSize: '1.3rem' }}>📜</span> DASHBOARD DE PEDIDOS ACUMULADOS ({pedidos.length})
                     </span>
                     <button
-                        onClick={obtenerPedidos}
-                        style={{ background: '#0D0B0A', border: '1px solid #382E26', padding: '0.6rem 1.1rem', borderRadius: '10px', color: '#C5A059', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold' }}
+                        onClick={() => {
+                            if (!navigator.onLine) {
+                                mostrarError('Sin conexión a Internet', 'Reconectate a internet para poder continuar');
+                                return;
+                            }
+                            obtenerPedidos();
+                        }}
+                        disabled={!isOnline}
+                        style={{ background: '#0D0B0A', border: '1px solid #382E26', padding: '0.6rem 1.1rem', borderRadius: '10px', color: isOnline ? '#C5A059' : '#555', cursor: isOnline ? 'pointer' : 'not-allowed', fontSize: '0.9rem', fontWeight: 'bold' }}
                     >
                         🔄 Recargar Pedidos
                     </button>
@@ -706,6 +722,7 @@ export default function EmpleadoView() {
                 <form onSubmit={handleEntregarYBorrar} style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
                     <input
                         type="text"
+                        disabled={!isOnline}
                         placeholder="CÓDIGO DEL PEDIDO (EJ: BC-X9123)"
                         value={codigoPedidoBorrar}
                         onChange={(e) => setCodigoPedidoBorrar(e.target.value)}
@@ -713,9 +730,19 @@ export default function EmpleadoView() {
                     />
                     <button
                         type="submit"
-                        style={{ padding: '1rem 2rem', backgroundColor: '#C5A059', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer' }}
+                        disabled={!isOnline}
+                        style={{
+                            padding: '1rem 2rem',
+                            backgroundColor: isOnline ? '#C5A059' : '#26201B',
+                            color: isOnline ? '#000' : '#777',
+                            border: 'none',
+                            borderRadius: '12px',
+                            fontWeight: 'bold',
+                            fontSize: '1rem',
+                            cursor: isOnline ? 'pointer' : 'not-allowed'
+                        }}
                     >
-                        ✅ Entregar y Borrar
+                        {isOnline ? '✅ Entregar y Borrar' : '📡 Sin conexión'}
                     </button>
                 </form>
             </div>
@@ -761,13 +788,37 @@ export default function EmpleadoView() {
                     <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
                         <button
                             onClick={() => handleCambiarEstadoPedido('EN PREPARACION')}
-                            style={{ flex: 1, minWidth: '200px', padding: '1.1rem', backgroundColor: '#26201B', color: '#F3ECE0', border: '1px solid #382E26', borderRadius: '12px', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer' }}
+                            disabled={!isOnline}
+                            style={{
+                                flex: 1,
+                                minWidth: '200px',
+                                padding: '1.1rem',
+                                backgroundColor: isOnline ? '#26201B' : '#14110E',
+                                color: isOnline ? '#F3ECE0' : '#555',
+                                border: '1px solid #382E26',
+                                borderRadius: '12px',
+                                fontWeight: 'bold',
+                                fontSize: '1.05rem',
+                                cursor: isOnline ? 'pointer' : 'not-allowed'
+                            }}
                         >
                             👨‍🍳 En Preparación
                         </button>
                         <button
                             onClick={() => handleCambiarEstadoPedido('LISTO')}
-                            style={{ flex: 1, minWidth: '200px', padding: '1.1rem', backgroundColor: '#C5A059', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer' }}
+                            disabled={!isOnline}
+                            style={{
+                                flex: 1,
+                                minWidth: '200px',
+                                padding: '1.1rem',
+                                backgroundColor: isOnline ? '#C5A059' : '#26201B',
+                                color: isOnline ? '#000' : '#777',
+                                border: 'none',
+                                borderRadius: '12px',
+                                fontWeight: 'bold',
+                                fontSize: '1.05rem',
+                                cursor: isOnline ? 'pointer' : 'not-allowed'
+                            }}
                         >
                             ✅ Marcar Listo
                         </button>
@@ -852,13 +903,33 @@ export default function EmpleadoView() {
                                         <div style={{ display: 'flex', gap: '0.65rem' }}>
                                             <button
                                                 onClick={() => handleEditarProducto(prod)}
-                                                style={{ padding: '0.6rem 1.1rem', backgroundColor: '#26201B', color: '#C5A059', border: '1px solid #382E26', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' }}
+                                                disabled={!isOnline}
+                                                style={{
+                                                    padding: '0.6rem 1.1rem',
+                                                    backgroundColor: isOnline ? '#26201B' : '#14110E',
+                                                    color: isOnline ? '#C5A059' : '#555',
+                                                    border: '1px solid #382E26',
+                                                    borderRadius: '10px',
+                                                    cursor: isOnline ? 'pointer' : 'not-allowed',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '0.9rem'
+                                                }}
                                             >
                                                 ✏️ Editar
                                             </button>
                                             <button
                                                 onClick={() => handleEliminarProducto(idProd)}
-                                                style={{ padding: '0.6rem 1.1rem', backgroundColor: 'rgba(220, 38, 38, 0.15)', color: '#f87171', border: '1px solid #dc2626', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' }}
+                                                disabled={!isOnline}
+                                                style={{
+                                                    padding: '0.6rem 1.1rem',
+                                                    backgroundColor: isOnline ? 'rgba(220, 38, 38, 0.15)' : '#14110E',
+                                                    color: isOnline ? '#f87171' : '#555',
+                                                    border: isOnline ? '1px solid #dc2626' : '1px solid #382E26',
+                                                    borderRadius: '10px',
+                                                    cursor: isOnline ? 'pointer' : 'not-allowed',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '0.9rem'
+                                                }}
                                             >
                                                 🗑️ Eliminar
                                             </button>
@@ -901,6 +972,7 @@ export default function EmpleadoView() {
                 <form onSubmit={handleBuscarPorId} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     <input
                         type="number"
+                        disabled={!isOnline}
                         placeholder="Ingresa el ID del producto (ej: 1)"
                         value={idBusqueda}
                         onChange={(e) => setIdBusqueda(e.target.value)}
@@ -908,7 +980,16 @@ export default function EmpleadoView() {
                     />
                     <button
                         type="submit"
-                        style={{ padding: '1rem 1.75rem', backgroundColor: '#26201B', color: '#C5A059', border: '1px solid #382E26', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                        disabled={!isOnline}
+                        style={{
+                            padding: '1rem 1.75rem',
+                            backgroundColor: isOnline ? '#26201B' : '#14110E',
+                            color: isOnline ? '#C5A059' : '#555',
+                            border: '1px solid #382E26',
+                            borderRadius: '12px',
+                            fontWeight: 'bold',
+                            cursor: isOnline ? 'pointer' : 'not-allowed'
+                        }}
                     >
                         Buscar ID
                     </button>
@@ -926,7 +1007,16 @@ export default function EmpleadoView() {
                         </div>
                         <button
                             onClick={() => handleEditarProducto(productoBuscado)}
-                            style={{ padding: '0.6rem 1.2rem', backgroundColor: '#C5A059', color: '#000', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}
+                            disabled={!isOnline}
+                            style={{
+                                padding: '0.6rem 1.2rem',
+                                backgroundColor: isOnline ? '#C5A059' : '#26201B',
+                                color: isOnline ? '#000' : '#777',
+                                border: 'none',
+                                borderRadius: '10px',
+                                fontWeight: 'bold',
+                                cursor: isOnline ? 'pointer' : 'not-allowed'
+                            }}
                         >
                             Editar este producto
                         </button>
@@ -951,12 +1041,19 @@ export default function EmpleadoView() {
                     )}
                 </div>
 
+                {!isOnline && (
+                    <div style={{ backgroundColor: 'rgba(244, 63, 94, 0.12)', border: '1px solid rgba(244, 63, 94, 0.35)', color: '#fda4af', padding: '0.85rem 1rem', borderRadius: '12px', marginBottom: '1.25rem', fontSize: '0.95rem', fontWeight: 'bold' }}>
+                        📡 Reconectate a internet para poder continuar
+                    </div>
+                )}
+
                 <form onSubmit={handleGuardarProducto} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                         <label style={{ fontSize: '0.85rem', color: '#9E8E7E', fontWeight: 'bold' }}>NOMBRE DEL PRODUCTO</label>
                         <input
                             type="text"
                             name="nombre"
+                            disabled={!isOnline}
                             placeholder="Ej: Macallan 18 Años"
                             value={formData.nombre}
                             onChange={handleInputChange}
@@ -969,6 +1066,7 @@ export default function EmpleadoView() {
                         <label style={{ fontSize: '0.85rem', color: '#9E8E7E', fontWeight: 'bold' }}>CATEGORÍA</label>
                         <select
                             name="categoria"
+                            disabled={!isOnline}
                             value={formData.categoria}
                             onChange={handleInputChange}
                             style={estiloInput}
@@ -993,6 +1091,7 @@ export default function EmpleadoView() {
                             step="0.01"
                             min="0"
                             name="precio"
+                            disabled={!isOnline}
                             placeholder="0.00"
                             value={formData.precio}
                             onChange={handleInputChange}
@@ -1007,6 +1106,7 @@ export default function EmpleadoView() {
                             type="number"
                             min="0"
                             name="stock"
+                            disabled={!isOnline}
                             placeholder="Cantidad en inventario"
                             value={formData.stock}
                             onChange={handleInputChange}
@@ -1020,6 +1120,7 @@ export default function EmpleadoView() {
                         <input
                             type="text"
                             name="imagen"
+                            disabled={!isOnline}
                             placeholder="https://..."
                             value={formData.imagen}
                             onChange={handleInputChange}
@@ -1032,6 +1133,7 @@ export default function EmpleadoView() {
                         <textarea
                             name="descripcion"
                             rows="3"
+                            disabled={!isOnline}
                             placeholder="Notas de sabor, añejamiento, origen..."
                             value={formData.descripcion}
                             onChange={handleInputChange}
@@ -1042,9 +1144,24 @@ export default function EmpleadoView() {
                     <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                         <button
                             type="submit"
-                            style={{ flex: 1, padding: '1.15rem', backgroundColor: '#C5A059', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '1.05rem', cursor: 'pointer' }}
+                            disabled={!isOnline}
+                            style={{
+                                flex: 1,
+                                padding: '1.15rem',
+                                backgroundColor: isOnline ? '#C5A059' : '#26201B',
+                                color: isOnline ? '#000' : '#777',
+                                border: 'none',
+                                borderRadius: '12px',
+                                fontWeight: 'bold',
+                                fontSize: '1.05rem',
+                                cursor: isOnline ? 'pointer' : 'not-allowed'
+                            }}
                         >
-                            {productoEditandoId ? '💾 Guardar Cambios del Producto' : '➕ Registrar Producto en Catálogo'}
+                            {!isOnline
+                                ? '📡 Reconectate a internet para poder continuar'
+                                : productoEditandoId
+                                    ? '💾 Guardar Cambios del Producto'
+                                    : '➕ Registrar Producto en Catálogo'}
                         </button>
                     </div>
                 </form>

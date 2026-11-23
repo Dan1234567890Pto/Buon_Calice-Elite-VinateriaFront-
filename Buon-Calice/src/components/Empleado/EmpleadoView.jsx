@@ -54,8 +54,12 @@ export default function EmpleadoView() {
 
     // Lee ÚNICAMENTE la sesión administrativa (nunca toca cliente_buoncalice)
     const [usuarioSesion] = useState(() => {
-        const guardado = localStorage.getItem('usuario_admin');
-        return guardado ? JSON.parse(guardado) : null;
+        try {
+            const guardado = localStorage.getItem('usuario_admin');
+            return guardado ? JSON.parse(guardado) : null;
+        } catch {
+            return null;
+        }
     });
 
     // Estado de conexión nativo
@@ -331,8 +335,8 @@ export default function EmpleadoView() {
         setFormData({
             nombre: prod.nombre || '',
             categoria: prod.categoria || 'Whisky',
-            precio: prod.precio || '',
-            stock: prod.stock || '',
+            precio: prod.precio ?? '',
+            stock: prod.stock ?? '',
             imagen: prod.imagen || prod.urlImagen || prod.icono || '',
             descripcion: prod.descripcion || ''
         });
@@ -396,6 +400,7 @@ export default function EmpleadoView() {
         try {
             await eliminarProducto(id);
             mostrarExito('Eliminado', 'El producto se ha removido del inventario.');
+            setPaginaActual(1);
             obtenerProductos();
         } catch (err) {
             mostrarError('Error al Eliminar', err.message || 'No se pudo eliminar el producto.');
@@ -865,6 +870,7 @@ export default function EmpleadoView() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             {productosPaginados.map((prod) => {
                                 const idProd = prod.idProducto || prod.id_producto || prod.id;
+                                const urlImg = prod.imagen || prod.urlImagen || prod.icono;
                                 return (
                                     <div key={idProd} style={{
                                         backgroundColor: '#0D0B0A',
@@ -878,13 +884,15 @@ export default function EmpleadoView() {
                                         gap: '1rem'
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                            {prod.imagen && (
-                                                <img
-                                                    src={prod.imagen}
-                                                    alt={prod.nombre}
-                                                    style={{ width: '54px', height: '54px', objectFit: 'cover', borderRadius: '10px', border: '1px solid #26201B' }}
-                                                    onError={(e) => { e.target.style.display = 'none'; }}
-                                                />
+                                            {urlImg && (
+                                                <div style={{ width: '56px', height: '56px', flexShrink: 0, backgroundColor: '#16120E', borderRadius: '10px', border: '1px solid #26201B', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '4px' }}>
+                                                    <img
+                                                        src={urlImg}
+                                                        alt={prod.nombre}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                                    />
+                                                </div>
                                             )}
                                             <div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
@@ -1072,6 +1080,7 @@ export default function EmpleadoView() {
                             style={estiloInput}
                         >
                             <option value="Whisky">Whisky</option>
+                            <option value="Bourbon">Bourbon</option>
                             <option value="Tequila">Tequila</option>
                             <option value="Vino Tinto">Vino Tinto</option>
                             <option value="Vino Blanco">Vino Blanco</option>

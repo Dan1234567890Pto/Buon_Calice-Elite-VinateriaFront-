@@ -16,16 +16,17 @@ const RenderImagenBotella = ({ url, alt, className = "w-full h-full object-conta
                 src={url}
                 alt={alt || 'Botella'}
                 className={className}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 onError={(e) => {
                     e.target.onerror = null;
-                    e.target.src = 'https://via.placeholder.com/150?text=Botella';
+                    e.target.src = 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=400&h=400&fit=crop';
                 }}
             />
         );
     }
 
     return (
-        <div className="text-4xl flex items-center justify-center h-full">
+        <div className="text-4xl flex items-center justify-center w-full h-full">
             {url || '🍷'}
         </div>
     );
@@ -105,6 +106,7 @@ export default function ClienteView() {
         };
     }, []);
 
+    // Cargar sesión del cliente y splash screen
     useEffect(() => {
         const timer = setTimeout(() => {
             setSplashVisible(false);
@@ -128,14 +130,22 @@ export default function ClienteView() {
             }
         }
 
+        return () => clearTimeout(timer);
+    }, []);
+
+    // Cargar catálogo al iniciar y recargarlo automáticamente si vuelve internet
+    useEffect(() => {
+        if (!isOnline) {
+            setCargandoApi(false);
+            return;
+        }
+
+        let activo = true;
         const cargarCatalogo = async () => {
-            if (!navigator.onLine) {
-                setCargandoApi(false);
-                return;
-            }
             try {
                 setCargandoApi(true);
                 const data = await getProductos(true);
+                if (!activo) return;
                 const adaptados = (data || []).map(p => ({
                     id: p.idProducto || p.id,
                     nombre: p.nombre,
@@ -149,35 +159,12 @@ export default function ClienteView() {
             } catch (error) {
                 console.error("Error conectando con la API de Buon Calice:", error);
             } finally {
-                setCargandoApi(false);
+                if (activo) setCargandoApi(false);
             }
         };
 
         cargarCatalogo();
-
-        return () => clearTimeout(timer);
-    }, []);
-
-    // Recargar catálogo automáticamente cuando vuelve el internet
-    useEffect(() => {
-        if (!isOnline) return;
-        (async () => {
-            try {
-                const data = await getProductos(true);
-                const adaptados = (data || []).map(p => ({
-                    id: p.idProducto || p.id,
-                    nombre: p.nombre,
-                    categoria: p.categoria || 'Vino Tinto',
-                    precio: p.precio,
-                    stock: p.stock,
-                    icono: p.icono || p.imagenUrl || p.imagen || '',
-                    desc: p.descripcion || 'Selección exclusiva de la casa.'
-                }));
-                setProductos(adaptados);
-            } catch (error) {
-                console.error("Error recargando catálogo:", error);
-            }
-        })();
+        return () => { activo = false; };
     }, [isOnline]);
 
     // Polling para rastrear pedidos en tiempo real desde Azure
@@ -245,13 +232,21 @@ export default function ClienteView() {
             const idx = prev.findIndex((item) => item.id === prodSeleccionado.id);
             if (idx > -1) {
                 const copia = [...prev];
-                copia[idx].cantidad += cantSeleccionada;
+                copia[idx].cantidad = Math.min(prodSeleccionado.stock, copia[idx].cantidad + cantSeleccionada);
                 return copia;
             }
             return [...prev, { ...prodSeleccionado, cantidad: cantSeleccionada }];
         });
         alert('Producto añadido al carrito.');
         setSeccion('sec-carrito');
+    };
+
+    const eliminarDelCarrito = (idProducto) => {
+        if (!navigator.onLine) {
+            alert('Para seguir comprando reconectate a internet');
+            return;
+        }
+        setCarrito((prev) => prev.filter((item) => item.id !== idProducto));
     };
 
     const confirmarYEnviarPedido = async (e) => {
@@ -502,7 +497,7 @@ export default function ClienteView() {
                                                         onClick={() => verDetalle(p)}
                                                         className={`bg-[#16120E] border border-[#26201B] p-3 rounded-2xl space-y-2 transition flex flex-col justify-between ${isOnline ? 'cursor-pointer hover:border-[#C5A059]/50' : 'opacity-60 cursor-not-allowed'}`}
                                                     >
-                                                        <div className="bg-[#0D0B0A] h-28 rounded-xl flex items-center justify-center overflow-hidden">
+                                                        <div className="bg-[#0D0B0A] h-28 w-full rounded-xl flex items-center justify-center overflow-hidden p-2">
                                                             <RenderImagenBotella url={p.icono} alt={p.nombre} />
                                                         </div>
                                                         <div>
@@ -566,8 +561,8 @@ export default function ClienteView() {
                         </button>
 
                         <div className="bg-[#16120E] border border-[#26201B] p-6 rounded-2xl text-center space-y-4">
-                            <div className="bg-[#0D0B0A] h-48 rounded-2xl flex items-center justify-center overflow-hidden">
-                                <RenderImagenBotella url={prodSeleccionado.icono} alt={prodSeleccionado.nombre} className="w-full h-full object-contain p-4" />
+                            <div className="bg-[#0D0B0A] h-48 w-full rounded-2xl flex items-center justify-center overflow-hidden p-4">
+                                <RenderImagenBotella url={prodSeleccionado.icono} alt={prodSeleccionado.nombre} />
                             </div>
                             <div>
                                 <h2 className="text-xl font-serif text-[#F3ECE0]">{prodSeleccionado.nombre}</h2>
@@ -604,12 +599,22 @@ export default function ClienteView() {
                                     {carrito.map((item) => (
                                         <div key={item.id} className="flex justify-between items-center border-b border-[#26201B] pb-2">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 bg-[#0D0B0A] rounded overflow-hidden">
-                                                    <RenderImagenBotella url={item.icono} alt={item.nombre} className="w-full h-full object-contain p-0.5" />
+                                                <div className="w-9 h-9 bg-[#0D0B0A] rounded overflow-hidden flex-shrink-0 p-0.5">
+                                                    <RenderImagenBotella url={item.icono} alt={item.nombre} />
                                                 </div>
                                                 <span>{item.nombre} x {item.cantidad}</span>
                                             </div>
-                                            <span className="text-[#D4AF37] font-bold">${item.precio * item.cantidad}.00</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-[#D4AF37] font-bold">${item.precio * item.cantidad}.00</span>
+                                                <button
+                                                    onClick={() => eliminarDelCarrito(item.id)}
+                                                    disabled={!isOnline}
+                                                    title="Quitar artículo"
+                                                    className="text-rose-400 hover:text-rose-300 font-bold disabled:opacity-40"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
                                         </div>
                                     ))}
                                     <div className="flex justify-between font-bold text-sm text-[#F3ECE0] pt-1">

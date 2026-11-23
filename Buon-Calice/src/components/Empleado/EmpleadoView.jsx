@@ -72,12 +72,18 @@ export default function EmpleadoView() {
     const productosPorPagina = 5;
 
     const [pedidos, setPedidos] = useState([]);
+    const [todosLosPedidos, setTodosLosPedidos] = useState([]);
     const [cargandoPedidos, setCargandoPedidos] = useState(true);
     const [errorPedidos, setErrorPedidos] = useState('');
     const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
 
     const [pedidosEliminados, setPedidosEliminados] = useState([]);
     const [reporteVentas, setReporteVentas] = useState({ totalPedidos: 0, totalVendido: 0, ticketPromedio: 0 });
+
+    // Filtros de ventas por mes, día y hora
+    const [filtroMes, setFiltroMes] = useState('');
+    const [filtroFecha, setFiltroFecha] = useState('');
+    const [filtroHora, setFiltroHora] = useState('');
 
     const [productoEditandoId, setProductoEditandoId] = useState(null);
     const [idBusqueda, setIdBusqueda] = useState('');
@@ -165,6 +171,7 @@ export default function EmpleadoView() {
 
         try {
             const data = await getPedidos();
+            setTodosLosPedidos(Array.isArray(data) ? data : []);
 
             const pedidosValidos = (data || []).filter(p => {
                 const idPed = (p.idPedido || p.id_pedido || p.id || '').toString();
@@ -300,6 +307,7 @@ export default function EmpleadoView() {
                 setPedidoSeleccionado(nuevaLista.length > 0 ? nuevaLista[0] : null);
             }
 
+            await obtenerPedidos();
             await obtenerMetricasVentas();
 
             mostrarExito('Pedido Entregado', `El pedido #${entradaLimpia} fue marcado como entregado y registrado en las ventas.`);
@@ -410,6 +418,45 @@ export default function EmpleadoView() {
 
     if (!usuarioSesion) return null;
 
+    // Filtrado de ventas entregadas por mes, fecha (día) y hora
+    const ventasEntregadas = todosLosPedidos.filter((p) => {
+        const estado = (p.estado || '').toUpperCase();
+        if (estado !== 'ENTREGADO') return false;
+
+        const rawFecha = p.fechaPedido || p.fecha || p.createdAt;
+        if (!rawFecha && (filtroMes || filtroFecha || filtroHora !== '')) return false;
+
+        if (rawFecha) {
+            const fechaObj = new Date(rawFecha);
+            if (!isNaN(fechaObj.getTime())) {
+                const yyyy = fechaObj.getFullYear();
+                const mm = String(fechaObj.getMonth() + 1).padStart(2, '0');
+                const dd = String(fechaObj.getDate()).padStart(2, '0');
+
+                if (filtroMes && `${yyyy}-${mm}` !== filtroMes) return false;
+                if (filtroFecha && `${yyyy}-${mm}-${dd}` !== filtroFecha) return false;
+
+                if (filtroHora !== '') {
+                    const horaPedido = String(fechaObj.getHours()).padStart(2, '0');
+                    if (horaPedido !== filtroHora) return false;
+                }
+            }
+        }
+        return true;
+    });
+
+    const hayFiltroVentas = Boolean(filtroMes || filtroFecha || filtroHora !== '');
+
+    const metricasMostradas = hayFiltroVentas
+        ? {
+            totalPedidos: ventasEntregadas.length,
+            totalVendido: ventasEntregadas.reduce((acc, p) => acc + Number(p.total || 0), 0),
+            ticketPromedio: ventasEntregadas.length > 0
+                ? ventasEntregadas.reduce((acc, p) => acc + Number(p.total || 0), 0) / ventasEntregadas.length
+                : 0
+        }
+        : reporteVentas;
+
     const productosFiltradosInventario = productos.filter(p =>
         (p.nombre || '').toLowerCase().includes(filtroInventario.toLowerCase()) ||
         (p.categoria || '').toLowerCase().includes(filtroInventario.toLowerCase())
@@ -462,14 +509,102 @@ export default function EmpleadoView() {
                 </button>
             </div>
 
+            {/* FILTRO DE VENTAS POR MES, DÍA Y HORA */}
+            <div style={{ backgroundColor: '#16120E', padding: '1.5rem', borderRadius: '18px', border: '1px solid #26201B', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                    <span style={{ fontSize: '0.95rem', color: '#C5A059', fontWeight: 'bold', letterSpacing: '0.06em' }}>
+                        📅 FILTRAR VENTAS POR MES, DÍA Y HORA
+                    </span>
+
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <input
+                            type="month"
+                            title="Filtrar por mes"
+                            value={filtroMes}
+                            onChange={(e) => {
+                                setFiltroMes(e.target.value);
+                                setFiltroFecha('');
+                            }}
+                            style={{ padding: '0.6rem 0.9rem', backgroundColor: '#0D0B0A', border: '1px solid #382E26', borderRadius: '10px', color: '#fff', fontSize: '0.9rem' }}
+                        />
+
+                        <input
+                            type="date"
+                            title="Filtrar por día exacto"
+                            value={filtroFecha}
+                            onChange={(e) => {
+                                setFiltroFecha(e.target.value);
+                                setFiltroMes('');
+                            }}
+                            style={{ padding: '0.6rem 0.9rem', backgroundColor: '#0D0B0A', border: '1px solid #382E26', borderRadius: '10px', color: '#fff', fontSize: '0.9rem' }}
+                        />
+
+                        <select
+                            value={filtroHora}
+                            onChange={(e) => setFiltroHora(e.target.value)}
+                            style={{ padding: '0.6rem 0.9rem', backgroundColor: '#0D0B0A', border: '1px solid #382E26', borderRadius: '10px', color: '#fff', fontSize: '0.9rem' }}
+                        >
+                            <option value="">Todas las horas</option>
+                            {Array.from({ length: 24 }, (_, h) => {
+                                const hh = String(h).padStart(2, '0');
+                                return (
+                                    <option key={hh} value={hh}>
+                                        {hh}:00 - {hh}:59 hrs
+                                    </option>
+                                );
+                            })}
+                        </select>
+
+                        {hayFiltroVentas && (
+                            <button
+                                onClick={() => {
+                                    setFiltroMes('');
+                                    setFiltroFecha('');
+                                    setFiltroHora('');
+                                }}
+                                style={{ padding: '0.6rem 1rem', backgroundColor: 'rgba(220, 38, 38, 0.15)', color: '#f87171', border: '1px solid #dc2626', borderRadius: '10px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold' }}
+                            >
+                                ✕ Limpiar filtro
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {hayFiltroVentas && (
+                    <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #26201B' }}>
+                        {ventasEntregadas.length === 0 ? (
+                            <p style={{ color: '#888', margin: 0, fontSize: '0.9rem' }}>
+                                No hay ventas entregadas registradas en ese periodo.
+                            </p>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '180px', overflowY: 'auto' }}>
+                                {ventasEntregadas.map((v) => {
+                                    const idV = v.codigo || `#BC-${v.idPedido || v.id}`;
+                                    const fechaTxt = v.fechaPedido ? new Date(v.fechaPedido).toLocaleString() : 'Sin fecha';
+                                    return (
+                                        <div key={v.idPedido || v.id || Math.random()} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#0D0B0A', padding: '0.65rem 1rem', borderRadius: '10px', border: '1px solid #26201B', fontSize: '0.9rem' }}>
+                                            <div>
+                                                <strong style={{ color: '#C5A059' }}>{idV}</strong>
+                                                <span style={{ color: '#888', marginLeft: '0.75rem' }}>{fechaTxt}</span>
+                                            </div>
+                                            <strong style={{ color: '#4ade80' }}>${Number(v.total || 0).toFixed(2)}</strong>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
             {/* TARJETAS DE MÉTRICAS */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
                 <div style={{ backgroundColor: '#16120E', padding: '1.75rem', borderRadius: '18px', border: '1px solid #26201B' }}>
                     <span style={{ fontSize: '0.9rem', color: '#9E8E7E', display: 'block', marginBottom: '0.5rem', letterSpacing: '0.08em', fontWeight: 'bold' }}>
-                        <span style={{ fontSize: '1.25rem', marginRight: '0.4rem' }}>💰</span> TOTAL VENDIDO
+                        <span style={{ fontSize: '1.25rem', marginRight: '0.4rem' }}>💰</span> TOTAL VENDIDO {hayFiltroVentas ? '(FILTRADO)' : ''}
                     </span>
                     <strong style={{ fontSize: '2.4rem', color: '#4ade80', fontFamily: 'serif' }}>
-                        ${Number(reporteVentas.totalVendido).toFixed(2)}
+                        ${Number(metricasMostradas.totalVendido).toFixed(2)}
                     </strong>
                 </div>
 
@@ -478,7 +613,7 @@ export default function EmpleadoView() {
                         <span style={{ fontSize: '1.25rem', marginRight: '0.4rem' }}>📦</span> PEDIDOS ENTREGADOS
                     </span>
                     <strong style={{ fontSize: '2.4rem', color: '#C5A059', fontFamily: 'serif' }}>
-                        {reporteVentas.totalPedidos}
+                        {metricasMostradas.totalPedidos}
                     </strong>
                 </div>
 
@@ -487,7 +622,7 @@ export default function EmpleadoView() {
                         <span style={{ fontSize: '1.25rem', marginRight: '0.4rem' }}>📊</span> TICKET PROMEDIO
                     </span>
                     <strong style={{ fontSize: '2.4rem', color: '#60a5fa', fontFamily: 'serif' }}>
-                        ${Number(reporteVentas.ticketPromedio).toFixed(2)}
+                        ${Number(metricasMostradas.ticketPromedio).toFixed(2)}
                     </strong>
                 </div>
             </div>

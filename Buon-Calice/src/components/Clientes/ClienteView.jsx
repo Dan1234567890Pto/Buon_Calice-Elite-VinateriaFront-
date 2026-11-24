@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { getProductos, crearPedido } from '../../services/api';
 import './Cliente.css';
 
+const API_BASE_URL = 'https://buon-calice-fhfefadvd2bygphx.westcentralus-01.azurewebsites.net/api';
+const API_PEDIDOS_URL = `${API_BASE_URL}/Pedidos`;
+const API_PAGOS_URL = `${API_BASE_URL}/Pagos`;
+
 const RenderImagenBotella = ({ url, alt, className = "w-full h-full object-contain p-2" }) => {
     const esUrlValida = typeof url === 'string' && (
         url.startsWith('http://') ||
@@ -71,11 +75,17 @@ export default function ClienteView() {
         }
     });
 
+    // Historial completo de pedidos anteriores del cliente
+    const [historialPedidos, setHistorialPedidos] = useState([]);
+    const [cargandoHistorial, setCargandoHistorial] = useState(false);
+    const [pedidoExpandidoId, setPedidoExpandidoId] = useState(null);
+
     const [cliNombre, setCliNombre] = useState('');
     const [cliCorreo, setCliCorreo] = useState('');
     const [cliTelefono, setCliTelefono] = useState('');
     const [errorTelefono, setErrorTelefono] = useState('');
     const [metodoPago, setMetodoPago] = useState('Pagar en línea');
+    const [procesandoPago, setProcesandoPago] = useState(false);
 
     const [perfil, setPerfil] = useState({
         nombre: 'No registrado',
@@ -133,6 +143,66 @@ export default function ClienteView() {
         return () => clearTimeout(timer);
     }, []);
 
+    // Validar regreso oficial desde Stripe Checkout (?pago=exito o ?pago=cancelado)
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const estadoPago = params.get('pago');
+        const sessionId = params.get('session_id');
+        const pedidoId = params.get('pedidoId');
+
+        if (!estadoPago || !pedidoId) return;
+
+        const verificarRetornoStripe = async () => {
+            setSplashVisible(false);
+
+            if (estadoPago === 'exito' && sessionId) {
+                try {
+                    const res = await fetch(`${API_PAGOS_URL}/confirmar-pago`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            sessionId: sessionId,
+                            pedidoId: parseInt(pedidoId, 10)
+                        })
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok && data.pagado) {
+                        setCarrito([]);
+                        localStorage.removeItem('carrito_buoncalice');
+
+                        const pedidoPrevio = JSON.parse(localStorage.getItem('ultimoPedido') || '{}');
+                        const pedidoConfirmado = {
+                            ...pedidoPrevio,
+                            idPedido: parseInt(pedidoId, 10),
+                            codigo: pedidoPrevio.codigo || `BC-${pedidoId}`,
+                            metodoPago: `Stripe PAGADO (${data.transaccionId || 'Confirmado'})`,
+                            estado: pedidoPrevio.estado || 'PENDIENTE'
+                        };
+                        localStorage.setItem('ultimoPedido', JSON.stringify(pedidoConfirmado));
+                        setUltimoPedido(pedidoConfirmado);
+                        setSeccion('sec-exito');
+                    } else {
+                        alert(`⚠️ Stripe aún reporta el estado: ${data.estado || 'pendiente'}. Tu pedido #${pedidoId} sigue como PENDIENTE.`);
+                        setSeccion('sec-estado');
+                    }
+                } catch (err) {
+                    console.error('Error al confirmar pago con Stripe:', err);
+                    alert('No se pudo validar el pago con el servidor. Revisa tu conexión.');
+                }
+            } else if (estadoPago === 'cancelado') {
+                alert(`❌ Pago cancelado o rechazado en Stripe. Tu pedido #${pedidoId} permanece PENDIENTE en el sistema.`);
+                setSeccion('sec-estado');
+            }
+
+            // Limpiar parámetros de la URL para evitar re-ejecuciones al recargar
+            window.history.replaceState({}, document.title, '/');
+        };
+
+        verificarRetornoStripe();
+    }, []);
+
     // Cargar catálogo al iniciar y recargarlo automáticamente si vuelve internet
     useEffect(() => {
         if (!isOnline) {
@@ -167,6 +237,46 @@ export default function ClienteView() {
         return () => { activo = false; };
     }, [isOnline]);
 
+    // Función para cargar el historial completo de pedidos del cliente desde Azure
+    const cargarHistorialPedidos = async () => {
+        if (!navigator.onLine) return;
+
+        const clienteGuardado = localStorage.getItem('cliente_buoncalice') || localStorage.getItem('usuario_cliente');
+        const usuarioActivo = clienteGuardado ? JSON.parse(clienteGuardado) : usuarioSesion;
+
+        if (!usuarioActivo) {
+            setHistorialPedidos([]);
+            return;
+        }
+
+        const idUsuario = Number(usuarioActivo.id_usuario || usuarioActivo.idUsuario || usuarioActivo.id);
+        if (!idUsuario || isNaN(idUsuario)) {
+            setHistorialPedidos([]);
+            return;
+        }
+
+        try {
+            setCargandoHistorial(true);
+            const res = await fetch(`${API_PEDIDOS_URL}?usuarioId=${idUsuario}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            const lista = Array.isArray(data) ? data : [];
+
+            setHistorialPedidos(lista);
+        } catch (err) {
+            console.error('Error cargando historial de pedidos:', err);
+        } finally {
+            setCargandoHistorial(false);
+        }
+    };
+
+    // Cargar historial automáticamente al entrar a "Pedido" o "Perfil"
+    useEffect(() => {
+        if ((seccion === 'sec-estado' || seccion === 'sec-perfil') && isOnline) {
+            cargarHistorialPedidos();
+        }
+    }, [seccion, isOnline, usuarioSesion]);
+
     // Polling para rastrear pedidos en tiempo real desde Azure
     useEffect(() => {
         if (!ultimoPedido || !isOnline) return;
@@ -177,7 +287,7 @@ export default function ClienteView() {
         const consultarEstado = async () => {
             if (!navigator.onLine) return;
             try {
-                const res = await fetch(`https://buon-calice-fhfefadvd2bygphx.westcentralus-01.azurewebsites.net/api/Pedidos/${idBuscar}`);
+                const res = await fetch(`${API_PEDIDOS_URL}/${idBuscar}`);
                 if (res.ok) {
                     const data = await res.json();
                     const pedidoApi = data.pedido || data;
@@ -187,6 +297,9 @@ export default function ClienteView() {
                         const pedidoActualizado = { ...ultimoPedido, estado: nuevoEstado };
                         setUltimoPedido(pedidoActualizado);
                         localStorage.setItem('ultimoPedido', JSON.stringify(pedidoActualizado));
+                        if (seccion === 'sec-estado') {
+                            cargarHistorialPedidos();
+                        }
                     }
                 }
             } catch (err) {
@@ -198,7 +311,7 @@ export default function ClienteView() {
         const interval = setInterval(consultarEstado, 4000);
 
         return () => clearInterval(interval);
-    }, [ultimoPedido, isOnline]);
+    }, [ultimoPedido, isOnline, seccion]);
 
     const verDetalle = (prod) => {
         if (!navigator.onLine) {
@@ -249,6 +362,47 @@ export default function ClienteView() {
         setCarrito((prev) => prev.filter((item) => item.id !== idProducto));
     };
 
+    // Volver a pedir los artículos de un pedido anterior
+    const volverAPedir = (pedidoHistorial) => {
+        if (!navigator.onLine) {
+            alert('Para seguir comprando reconectate a internet');
+            return;
+        }
+
+        const detalles = pedidoHistorial.productos || pedidoHistorial.detalles || pedidoHistorial.items || [];
+        if (detalles.length === 0) {
+            alert('Este pedido no tiene el desglose de productos disponible.');
+            return;
+        }
+
+        let agregados = 0;
+        setCarrito((prev) => {
+            const copia = [...prev];
+            detalles.forEach((det) => {
+                const idProd = det.productoId || det.idProducto || det.id;
+                const prodCatalogo = productos.find((p) => p.id === idProd);
+                if (prodCatalogo && prodCatalogo.stock > 0) {
+                    const cantDeseada = Math.min(prodCatalogo.stock, Number(det.cantidad || 1));
+                    const idxExistente = copia.findIndex((item) => item.id === idProd);
+                    if (idxExistente > -1) {
+                        copia[idxExistente].cantidad = Math.min(prodCatalogo.stock, copia[idxExistente].cantidad + cantDeseada);
+                    } else {
+                        copia.push({ ...prodCatalogo, cantidad: cantDeseada });
+                    }
+                    agregados += 1;
+                }
+            });
+            return copia;
+        });
+
+        if (agregados > 0) {
+            alert(`Se añadieron ${agregados} producto(s) disponibles a tu carrito.`);
+            setSeccion('sec-carrito');
+        } else {
+            alert('Los productos de este pedido se encuentran agotados actualmente.');
+        }
+    };
+
     const confirmarYEnviarPedido = async (e) => {
         e.preventDefault();
 
@@ -271,17 +425,21 @@ export default function ClienteView() {
         }
 
         setErrorTelefono('');
+        setProcesandoPago(true);
 
         const idUsuarioReal = usuarioActivo
             ? (usuarioActivo.id_usuario || usuarioActivo.idUsuario || usuarioActivo.id)
             : 1;
 
         const total = carrito.reduce((acc, curr) => acc + curr.precio * curr.cantidad, 0);
+        const esPagoStripe = metodoPago === 'Pagar en línea';
+        const metodoInicial = esPagoStripe ? 'Stripe PENDIENTE' : 'Pagar al recoger';
 
         try {
+            // 1. Registrar el pedido en SQL Server (en estado PENDIENTE)
             const datosPedidoDTO = {
                 usuarioId: parseInt(idUsuarioReal),
-                metodoPago: metodoPago,
+                metodoPago: metodoInicial,
                 productos: carrito.map(item => ({
                     productoId: item.id,
                     cantidad: item.cantidad,
@@ -304,13 +462,35 @@ export default function ClienteView() {
                 },
                 items: carrito,
                 total: respuestaAPI?.total || total,
-                metodoPago: metodoPago,
+                metodoPago: metodoInicial,
                 estado: respuestaAPI?.estado || 'PENDIENTE'
             };
 
             localStorage.setItem('ultimoPedido', JSON.stringify(nuevoPedido));
             setUltimoPedido(nuevoPedido);
 
+            // 2. Si eligió pago en línea, generar sesión de Stripe Checkout y redirigir
+            if (esPagoStripe) {
+                const resStripe = await fetch(`${API_PAGOS_URL}/crear-checkout/${idGenerado}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        urlBase: window.location.origin
+                    })
+                });
+
+                const dataStripe = await resStripe.json();
+
+                if (!resStripe.ok || !dataStripe.url) {
+                    throw new Error(dataStripe.mensaje || dataStripe.error || 'No se pudo iniciar la pasarela de Stripe.');
+                }
+
+                // Redirigir al formulario oficial de Stripe Checkout
+                window.location.href = dataStripe.url;
+                return;
+            }
+
+            // 3. Si eligió pagar al recoger en sucursal, finalizar flujo directo
             const data = await getProductos(true);
             setProductos((data || []).map(p => ({
                 id: p.idProducto || p.id,
@@ -326,7 +506,9 @@ export default function ClienteView() {
             localStorage.removeItem('carrito_buoncalice');
             setSeccion('sec-exito');
         } catch (err) {
-            alert('Error al registrar el pedido en el servidor: ' + err.message);
+            alert('Error al procesar el pedido: ' + err.message);
+        } finally {
+            setProcesandoPago(false);
         }
     };
 
@@ -334,6 +516,7 @@ export default function ClienteView() {
         localStorage.removeItem('cliente_buoncalice');
         localStorage.removeItem('usuario_cliente');
         setUsuarioSesion(null);
+        setHistorialPedidos([]);
         setPerfil({ nombre: 'No registrado', correo: 'No registrado', telefono: 'No registrado' });
         setCliNombre('');
         setCliCorreo('');
@@ -373,6 +556,20 @@ export default function ClienteView() {
 
     const totalCarrito = carrito.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
     const estadoActual = (ultimoPedido?.estado || '').toUpperCase();
+
+    const obtenerEstiloEstado = (estadoRaw) => {
+        const est = (estadoRaw || 'PENDIENTE').toUpperCase();
+        if (est === 'ENTREGADO') {
+            return { texto: 'Entregado', clase: 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30' };
+        }
+        if (est === 'LISTO') {
+            return { texto: 'Listo para recoger', clase: 'text-sky-400 bg-sky-500/15 border-sky-500/30' };
+        }
+        if (est === 'EN PREPARACION' || est === 'EN_PREPARACION') {
+            return { texto: 'En Preparación', clase: 'text-[#C5A059] bg-[#C5A059]/15 border-[#C5A059]/30' };
+        }
+        return { texto: 'Pendiente', clase: 'text-amber-400 bg-amber-500/15 border-amber-500/30' };
+    };
 
     return (
         <div className="bg-[#050404] text-[#E2D9CC] min-h-screen pb-24 font-sans selection:bg-[#C5A059] selection:text-black">
@@ -646,7 +843,12 @@ export default function ClienteView() {
 
                 {seccion === 'sec-confirmacion' && (
                     <section className="space-y-4">
-                        <h3 className="text-xs uppercase tracking-wider text-[#C5A059] font-medium">Datos de Contacto y Pago</h3>
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-xs uppercase tracking-wider text-[#C5A059] font-medium">Datos de Contacto y Pago</h3>
+                            <button onClick={() => setSeccion('sec-carrito')} className="text-[11px] text-[#9E8E7E] hover:text-[#C5A059]">
+                                ← Volver al carrito
+                            </button>
+                        </div>
 
                         <form onSubmit={confirmarYEnviarPedido} className="bg-[#16120E] border border-[#26201B] p-5 rounded-2xl space-y-4 text-xs">
                             <div className="space-y-3 border-b border-[#26201B] pb-4">
@@ -661,7 +863,7 @@ export default function ClienteView() {
                                 <input
                                     type="text"
                                     required
-                                    disabled={!isOnline}
+                                    disabled={!isOnline || procesandoPago}
                                     placeholder="Nombre completo"
                                     value={cliNombre}
                                     onChange={(e) => setCliNombre(e.target.value)}
@@ -670,7 +872,7 @@ export default function ClienteView() {
                                 <input
                                     type="email"
                                     required
-                                    disabled={!isOnline}
+                                    disabled={!isOnline || procesandoPago}
                                     placeholder="Correo electrónico"
                                     value={cliCorreo}
                                     onChange={(e) => setCliCorreo(e.target.value)}
@@ -680,7 +882,7 @@ export default function ClienteView() {
                                     <input
                                         type="tel"
                                         required
-                                        disabled={!isOnline}
+                                        disabled={!isOnline || procesandoPago}
                                         placeholder="Teléfono"
                                         value={cliTelefono}
                                         onChange={(e) => {
@@ -704,29 +906,63 @@ export default function ClienteView() {
                                 </div>
                             </div>
 
-                            <div className="border-b border-[#26201B] pb-3 space-y-2">
+                            <div className="border-b border-[#26201B] pb-4 space-y-3">
                                 <h4 className="text-[#F3ECE0] font-semibold">2. Método de Pago</h4>
-                                <label className="flex items-center gap-2 text-[#F3ECE0]">
-                                    <input type="radio" name="pago" disabled={!isOnline} value="Pagar en línea" checked={metodoPago === 'Pagar en línea'} onChange={(e) => setMetodoPago(e.target.value)} className="accent-[#C5A059]" />
-                                    Pagar en línea
+                                <label className="flex items-center gap-2 text-[#F3ECE0] cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="pago"
+                                        disabled={!isOnline || procesandoPago}
+                                        value="Pagar en línea"
+                                        checked={metodoPago === 'Pagar en línea'}
+                                        onChange={(e) => setMetodoPago(e.target.value)}
+                                        className="accent-[#C5A059]"
+                                    />
+                                    <span>Pagar en línea con Stripe Checkout (Tarjeta)</span>
                                 </label>
-                                <label className="flex items-center gap-2 text-[#F3ECE0]">
-                                    <input type="radio" name="pago" disabled={!isOnline} value="Pagar al recoger" checked={metodoPago === 'Pagar al recoger'} onChange={(e) => setMetodoPago(e.target.value)} className="accent-[#C5A059]" />
-                                    Pagar al recoger
+                                <label className="flex items-center gap-2 text-[#F3ECE0] cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="pago"
+                                        disabled={!isOnline || procesandoPago}
+                                        value="Pagar al recoger"
+                                        checked={metodoPago === 'Pagar al recoger'}
+                                        onChange={(e) => setMetodoPago(e.target.value)}
+                                        className="accent-[#C5A059]"
+                                    />
+                                    <span>Pagar al recoger en sucursal</span>
                                 </label>
+
+                                {metodoPago === 'Pagar en línea' && (
+                                    <div className="mt-2 bg-[#0D0B0A] border border-[#C5A059]/40 rounded-2xl p-4 space-y-2 text-[11px]">
+                                        <div className="flex items-center justify-between text-[#C5A059] font-bold">
+                                            <span>💳 Pasarela Oficial Stripe Checkout</span>
+                                            <span>Modo Prueba</span>
+                                        </div>
+                                        <p className="text-[#9E8E7E] leading-relaxed">
+                                            Al confirmar, tu pedido se registrará como <strong className="text-amber-400">PENDIENTE</strong> y serás redirigido de forma segura a <strong className="text-[#F3ECE0]">checkout.stripe.com</strong> para ingresar tu tarjeta.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
-                            <div className="flex justify-between items-center pt-2">
+                            <div className="flex justify-between items-center pt-1">
                                 <span className="text-[#9E8E7E]">Total a Pagar:</span>
                                 <span className="text-base font-bold text-[#D4AF37]">${totalCarrito}.00</span>
                             </div>
 
                             <button
                                 type="submit"
-                                disabled={!isOnline}
-                                className={`w-full font-bold py-3.5 rounded-xl transition ${isOnline ? 'bg-[#C5A059] hover:bg-[#B38E47] text-black' : 'bg-[#26201B] text-[#777] cursor-not-allowed'}`}
+                                disabled={!isOnline || procesandoPago}
+                                className={`w-full font-bold py-3.5 rounded-xl transition ${isOnline && !procesandoPago ? 'bg-[#C5A059] hover:bg-[#B38E47] text-black' : 'bg-[#26201B] text-[#777] cursor-not-allowed'}`}
                             >
-                                {isOnline ? 'CONFIRMAR Y FINALIZAR PEDIDO' : 'PARA SEGUIR COMPRANDO RECONECTATE A INTERNET'}
+                                {!isOnline
+                                    ? 'PARA SEGUIR COMPRANDO RECONECTATE A INTERNET'
+                                    : procesandoPago
+                                        ? '⏳ CONECTANDO CON STRIPE CHECKOUT...'
+                                        : metodoPago === 'Pagar en línea'
+                                            ? `CONTINUAR A STRIPE ($${totalCarrito}.00)`
+                                            : 'CONFIRMAR Y FINALIZAR PEDIDO'}
                             </button>
                         </form>
                     </section>
@@ -739,36 +975,179 @@ export default function ClienteView() {
                             <h2 className="text-xl font-serif text-[#F3ECE0]">¡Pedido Registrado!</h2>
                             <span className="text-[10px] uppercase tracking-widest text-[#9E8E7E] block">Tu Código de Recolección</span>
                             <p className="text-3xl font-mono font-bold text-[#D4AF37]">#{ultimoPedido?.codigo || '------'}</p>
+                            {ultimoPedido?.metodoPago && (
+                                <p className="text-[11px] text-emerald-400 font-medium">
+                                    Método: {ultimoPedido.metodoPago}
+                                </p>
+                            )}
                             <p className="text-xs text-[#9E8E7E]">Tu pedido ha sido enviado al panel de la sucursal.</p>
                             <button onClick={() => setSeccion('sec-estado')} className="w-full bg-[#C5A059] text-black font-bold text-xs py-3 rounded-xl transition mt-2">
-                                VER ESTADO EN TIEMPO REAL
+                                VER ESTADO E HISTORIAL
                             </button>
                         </div>
                     </section>
                 )}
 
+                {/* SECCIÓN DE ESTADO ACTUAL + HISTORIAL DE MIS PEDIDOS ANTERIORES */}
                 {seccion === 'sec-estado' && (
-                    <section className="space-y-4">
-                        <h3 className="text-xs uppercase tracking-wider text-[#C5A059] font-medium">Estado de tu Pedido</h3>
-                        <div className="bg-[#16120E] border border-[#26201B] p-5 rounded-2xl space-y-3 text-xs">
-                            {!ultimoPedido ? (
-                                <p className="text-center text-[#9E8E7E]">No tienes ningún pedido activo en este momento.</p>
+                    <section className="space-y-6">
+                        {/* PEDIDO RECIENTE / EN CURSO */}
+                        <div className="space-y-3">
+                            <h3 className="text-xs uppercase tracking-wider text-[#C5A059] font-medium">Pedido Actual en Curso</h3>
+                            <div className="bg-[#16120E] border border-[#26201B] p-5 rounded-2xl space-y-3 text-xs">
+                                {!ultimoPedido ? (
+                                    <p className="text-center text-[#9E8E7E]">No tienes ningún pedido reciente en curso.</p>
+                                ) : (
+                                    <>
+                                        <div className="border-b border-[#26201B] pb-2 mb-2 space-y-1">
+                                            <span className="text-[10px] text-[#9E8E7E] block">Código: #{ultimoPedido.codigo}</span>
+                                            <span className="font-bold text-[#D4AF37] block">Total: ${ultimoPedido.total}.00</span>
+                                            {ultimoPedido.metodoPago && (
+                                                <span className={`text-[11px] block ${ultimoPedido.metodoPago.includes('PENDIENTE') ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                                    {ultimoPedido.metodoPago}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className={`flex items-center gap-3 ${['PENDIENTE', 'EN PREPARACION', 'EN_PREPARACION', 'LISTO', 'ENTREGADO'].includes(estadoActual) ? 'text-amber-400 font-medium' : 'text-[#9E8E7E]'}`}>
+                                            ✓ Pedido recibido
+                                        </div>
+                                        <div className={`flex items-center gap-3 ${['EN PREPARACION', 'EN_PREPARACION', 'LISTO', 'ENTREGADO'].includes(estadoActual) ? 'text-[#D4AF37] font-bold' : 'text-[#9E8E7E]'}`}>
+                                            ● En Preparación
+                                        </div>
+                                        <div className={`flex items-center gap-3 ${['LISTO', 'ENTREGADO'].includes(estadoActual) ? 'text-emerald-400 font-bold' : 'text-[#9E8E7E]'}`}>
+                                            ○ {estadoActual === 'ENTREGADO' ? 'Pedido entregado' : 'Listo para recoger'}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* HISTORIAL COMPLETO DESDE SQL SERVER */}
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-xs uppercase tracking-wider text-[#C5A059] font-medium">
+                                    Mis Pedidos Anteriores ({historialPedidos.length})
+                                </h3>
+                                {isOnline && usuarioSesion && (
+                                    <button
+                                        onClick={cargarHistorialPedidos}
+                                        className="text-[11px] text-[#C5A059] hover:underline"
+                                    >
+                                        🔄 Actualizar
+                                    </button>
+                                )}
+                            </div>
+
+                            {!usuarioSesion ? (
+                                <div className="bg-[#16120E] border border-[#26201B] p-5 rounded-2xl text-center space-y-3 text-xs">
+                                    <p className="text-[#9E8E7E]">Inicia sesión con tu cuenta de cliente para consultar todo tu historial de compras.</p>
+                                    <button
+                                        onClick={() => navigate('/perfil')}
+                                        className="bg-[#C5A059] text-black font-bold px-4 py-2.5 rounded-xl"
+                                    >
+                                        INICIAR SESIÓN
+                                    </button>
+                                </div>
+                            ) : !isOnline ? (
+                                <div className="bg-[#16120E] border border-rose-500/30 p-4 rounded-2xl text-center text-xs text-rose-300">
+                                    📡 Reconéctate a internet para cargar tu historial de pedidos.
+                                </div>
+                            ) : cargandoHistorial ? (
+                                <div className="bg-[#16120E] border border-[#26201B] p-6 rounded-2xl text-center text-xs text-[#9E8E7E]">
+                                    Consultando historial de compras...
+                                </div>
+                            ) : historialPedidos.length === 0 ? (
+                                <div className="bg-[#16120E] border border-[#26201B] p-6 rounded-2xl text-center text-xs text-[#9E8E7E]">
+                                    Aún no tienes pedidos registrados en tu cuenta.
+                                </div>
                             ) : (
-                                <>
-                                    <div className="border-b border-[#26201B] pb-2 mb-2">
-                                        <span className="text-[10px] text-[#9E8E7E] block">Código: #{ultimoPedido.codigo}</span>
-                                        <span className="font-bold text-[#D4AF37]">Total: ${ultimoPedido.total}.00</span>
-                                    </div>
-                                    <div className={`flex items-center gap-3 ${['PENDIENTE', 'EN PREPARACION', 'EN_PREPARACION', 'LISTO', 'ENTREGADO'].includes(estadoActual) ? 'text-amber-400 font-medium' : 'text-[#9E8E7E]'}`}>
-                                        ✓ Pedido recibido
-                                    </div>
-                                    <div className={`flex items-center gap-3 ${['EN PREPARACION', 'EN_PREPARACION', 'LISTO', 'ENTREGADO'].includes(estadoActual) ? 'text-[#D4AF37] font-bold' : 'text-[#9E8E7E]'}`}>
-                                        ● En Preparación
-                                    </div>
-                                    <div className={`flex items-center gap-3 ${['LISTO', 'ENTREGADO'].includes(estadoActual) ? 'text-emerald-400 font-bold' : 'text-[#9E8E7E]'}`}>
-                                        ○ Listo para recoger
-                                    </div>
-                                </>
+                                <div className="space-y-3">
+                                    {historialPedidos.map((ped) => {
+                                        const idPed = ped.idPedido || ped.id_pedido || ped.id;
+                                        const codigoPed = ped.codigo || `BC-${idPed}`;
+                                        const badge = obtenerEstiloEstado(ped.estado);
+                                        const detalles = ped.productos || ped.detalles || ped.items || [];
+                                        const estaExpandido = pedidoExpandidoId === idPed;
+                                        const fechaPed = ped.fechaPedido
+                                            ? new Date(ped.fechaPedido).toLocaleDateString('es-MX', {
+                                                day: '2-digit',
+                                                month: 'short',
+                                                year: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })
+                                            : 'Fecha registrada';
+
+                                        return (
+                                            <div
+                                                key={idPed || codigoPed}
+                                                className="bg-[#16120E] border border-[#26201B] rounded-2xl p-4 space-y-3 text-xs transition hover:border-[#382E26]"
+                                            >
+                                                <div className="flex justify-between items-start gap-2">
+                                                    <div>
+                                                        <span className="font-mono font-bold text-sm text-[#D4AF37] block">
+                                                            #{codigoPed}
+                                                        </span>
+                                                        <span className="text-[11px] text-[#9E8E7E]">{fechaPed}</span>
+                                                    </div>
+                                                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${badge.clase}`}>
+                                                        {badge.texto}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex justify-between items-center border-t border-[#26201B] pt-2.5">
+                                                    <span className="text-[11px] text-[#9E8E7E] truncate max-w-[180px]">
+                                                        {ped.metodoPago || 'Pago en sucursal'}
+                                                    </span>
+                                                    <span className="text-sm font-bold text-[#F3ECE0]">
+                                                        ${Number(ped.total || 0).toFixed(2)}
+                                                    </span>
+                                                </div>
+
+                                                {/* Desglose desplegable de botellas */}
+                                                {detalles.length > 0 && (
+                                                    <div className="pt-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setPedidoExpandidoId(estaExpandido ? null : idPed)}
+                                                            className="text-[11px] text-[#C5A059] font-medium flex items-center gap-1"
+                                                        >
+                                                            {estaExpandido
+                                                                ? '▲ Ocultar artículos'
+                                                                : `▼ Ver artículos (${detalles.length})`}
+                                                        </button>
+
+                                                        {estaExpandido && (
+                                                            <div className="mt-2 bg-[#0D0B0A] border border-[#26201B] rounded-xl p-3 space-y-2">
+                                                                {detalles.map((d, idx) => (
+                                                                    <div key={idx} className="flex justify-between text-[11px]">
+                                                                        <span className="text-[#E2D9CC]">
+                                                                            {d.cantidad}x {d.nombreProducto || d.nombre || `Producto #${d.productoId}`}
+                                                                        </span>
+                                                                        <span className="text-[#D4AF37] font-semibold">
+                                                                            ${(Number(d.cantidad || 1) * Number(d.precioUnitario || 0)).toFixed(2)}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {detalles.length > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        disabled={!isOnline}
+                                                        onClick={() => volverAPedir(ped)}
+                                                        className="w-full py-2 rounded-xl bg-[#0D0B0A] border border-[#382E26] hover:border-[#C5A059] text-[#C5A059] font-bold text-[11px] transition disabled:opacity-40"
+                                                    >
+                                                        ↻ Volver a pedir estos artículos
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             )}
                         </div>
                     </section>
@@ -781,6 +1160,18 @@ export default function ClienteView() {
                             <p className="text-[#9E8E7E]">Nombre: <span className="text-[#F3ECE0] font-medium">{perfil.nombre}</span></p>
                             <p className="text-[#9E8E7E]">Correo: <span className="text-[#F3ECE0] font-medium">{perfil.correo}</span></p>
                             <p className="text-[#9E8E7E]">Teléfono: <span className="text-[#F3ECE0] font-medium">{perfil.telefono}</span></p>
+
+                            {usuarioSesion && (
+                                <div className="pt-2 border-t border-[#26201B] flex justify-between items-center">
+                                    <span className="text-[#9E8E7E]">Pedidos realizados:</span>
+                                    <button
+                                        onClick={() => setSeccion('sec-estado')}
+                                        className="text-[#C5A059] font-bold hover:underline"
+                                    >
+                                        {historialPedidos.length} pedido(s) →
+                                    </button>
+                                </div>
+                            )}
 
                             {usuarioSesion ? (
                                 <button
@@ -827,7 +1218,7 @@ export default function ClienteView() {
                     className={`flex flex-col items-center gap-1 transition ${seccion === 'sec-estado' || seccion === 'sec-exito' ? 'text-[#C5A059] font-bold' : 'text-[#9E8E7E]'}`}
                 >
                     <span className="text-base">📦</span>
-                    <span>Pedido</span>
+                    <span>Pedidos</span>
                 </button>
             </nav>
         </div>

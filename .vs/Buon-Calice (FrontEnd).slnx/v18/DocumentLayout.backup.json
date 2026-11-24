@@ -34,33 +34,8 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 5,
+          "SelectedChildIndex": 3,
           "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "ClienteView.jsx",
-              "DocumentMoniker": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Clientes\\ClienteView.jsx",
-              "RelativeDocumentMoniker": "Buon-Calice\\src\\components\\Clientes\\ClienteView.jsx",
-              "ToolTip": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Clientes\\ClienteView.jsx",
-              "RelativeToolTip": "Buon-Calice\\src\\components\\Clientes\\ClienteView.jsx",
-              "ViewState": "AgIAABEDAAAAAAAAAAAIwD0DAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003663|",
-              "WhenOpened": "2026-11-22T23:40:36.123Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "ProtectedRoute.jsx",
-              "DocumentMoniker": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\ProtectedRoute.jsx",
-              "RelativeDocumentMoniker": "Buon-Calice\\src\\components\\ProtectedRoute.jsx",
-              "ToolTip": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\ProtectedRoute.jsx",
-              "RelativeToolTip": "Buon-Calice\\src\\components\\ProtectedRoute.jsx",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003663|",
-              "WhenOpened": "2026-11-22T03:47:16.745Z"
-            },
             {
               "$type": "Document",
               "DocumentIndex": 4,
@@ -105,10 +80,35 @@
               "RelativeDocumentMoniker": "Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
               "ToolTip": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
               "RelativeToolTip": "Buon-Calice\\src\\components\\Empleado\\EmpleadoView.jsx",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAJIEAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAHAEAAAAAAAAAAAuwIAEAABtAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003663|",
               "WhenOpened": "2026-11-13T21:47:29.964Z",
               "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ClienteView.jsx",
+              "DocumentMoniker": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Clientes\\ClienteView.jsx",
+              "RelativeDocumentMoniker": "Buon-Calice\\src\\components\\Clientes\\ClienteView.jsx",
+              "ToolTip": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\Clientes\\ClienteView.jsx",
+              "RelativeToolTip": "Buon-Calice\\src\\components\\Clientes\\ClienteView.jsx",
+              "ViewState": "AgIAABcDAAAAAAAAAAAuwEIDAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003663|",
+              "WhenOpened": "2026-11-22T23:40:36.123Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "ProtectedRoute.jsx",
+              "DocumentMoniker": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\ProtectedRoute.jsx",
+              "RelativeDocumentMoniker": "Buon-Calice\\src\\components\\ProtectedRoute.jsx",
+              "ToolTip": "C:\\Users\\mero0\\OneDrive\\Escritorio\\Buon-Calice (FrontEnd)\\Buon-Calice\\src\\components\\ProtectedRoute.jsx",
+              "RelativeToolTip": "Buon-Calice\\src\\components\\ProtectedRoute.jsx",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003663|",
+              "WhenOpened": "2026-11-22T03:47:16.745Z"
             }
           ]
         }

@@ -12,8 +12,9 @@ export default function App() {
             <div className="app-container">
                 <main className="app-main-content">
                     <Routes>
-                        {/* Vista principal del cliente (Catálogo público) */}
+                        {/* Vista principal del cliente (Catálogo público y retorno de Stripe) */}
                         <Route path="/" element={<ClienteView />} />
+                        <Route path="/cliente" element={<ClienteView />} />
 
                         {/* Login de clientes / perfil */}
                         <Route path="/perfil" element={<PerfilClienteView />} />
